@@ -8,6 +8,9 @@ use Magento\Catalog\Model\Layer;
 use Magento\Catalog\Model\Layer\Filter\AbstractFilter;
 use Magento\Catalog\Model\Layer\Filter\Item\DataBuilder;
 use Magento\Catalog\Model\Layer\Filter\ItemFactory;
+use Magento\Catalog\Model\Product\Attribute\Source\Status as ProductStatus;
+use Magento\Catalog\Model\Product\Visibility as ProductVisibility;
+use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductCollectionFactory;
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\ResourceConnection;
@@ -43,6 +46,8 @@ class SaleFilter extends AbstractFilter
         private readonly ResourceConnection $resourceConnection,
         private readonly Config $config,
         private readonly LoggerInterface $logger,
+        private readonly ProductCollectionFactory $productCollectionFactory,
+        private readonly ProductVisibility $productVisibility,
         array $data = []
     ) {
         parent::__construct(
@@ -162,9 +167,7 @@ class SaleFilter extends AbstractFilter
 
             $items = [];
 
-            $onSaleCount    = $this->countForScope(true);
-            $showBothOptions = $this->config->isShowNotOnSaleOption();
-
+            $onSaleCount = $this->countForScope(true);
             if ($onSaleCount > 0) {
                 $items[] = [
                     'label' => $this->config->getOnSaleOptionLabel(),
@@ -173,7 +176,12 @@ class SaleFilter extends AbstractFilter
                 ];
             }
 
-            if ($showBothOptions) {
+            // "Not on sale" option only surfaces when
+            //   (a) the admin toggle is enabled, AND
+            //   (b) there is at least one regular-priced product in the
+            //       current layer (clicking a zero-count option just
+            //       yields an empty grid, so hide it).
+            if ($this->config->isShowNotOnSaleOption()) {
                 $notOnSaleCount = $this->countForScope(false);
                 if ($notOnSaleCount > 0) {
                     $items[] = [
@@ -198,6 +206,12 @@ class SaleFilter extends AbstractFilter
     /**
      * Count products in the current layer that ARE or are NOT on sale.
      *
+     * Builds a fresh, non-paginated product collection scoped to the current
+     * category / visibility / status — cloning the layer's product collection
+     * would inherit the toolbar's `entity_id IN (page-slice)` WHERE clause,
+     * so both on-sale and not-on-sale counts would only see the visible page
+     * (e.g. 12 of 24 products).
+     *
      * Uses a per-scope alias so successive on-sale + not-on-sale calls in
      * the same request never collide on correlation name.
      *
@@ -205,13 +219,20 @@ class SaleFilter extends AbstractFilter
      */
     private function countForScope(bool $onSale): int
     {
-        $collection = clone $this->getLayer()->getProductCollection();
-        $select     = clone $collection->getSelect();
+        $collection = $this->productCollectionFactory->create();
+        $collection->addAttributeToFilter('status', ProductStatus::STATUS_ENABLED);
+        $collection->setVisibility($this->productVisibility->getVisibleInCatalogIds());
+
+        $category = $this->getLayer()->getCurrentCategory();
+        if ($category && (int) $category->getId() > 0 && (int) $category->getLevel() >= 2) {
+            $collection->addCategoryFilter($category);
+        }
+
+        $select = clone $collection->getSelect();
         $select->reset(Select::COLUMNS);
         $select->reset(Select::ORDER);
         $select->reset(Select::LIMIT_COUNT);
         $select->reset(Select::LIMIT_OFFSET);
-        $select->columns('COUNT(DISTINCT e.entity_id) AS cnt');
 
         $customerGroupId = (int) $this->customerSession->getCustomerGroupId();
         $websiteId       = (int) $this->_storeManager->getStore()->getWebsiteId();
@@ -232,6 +253,8 @@ class SaleFilter extends AbstractFilter
             $select->joinLeft([$alias => $table], $join, [])
                 ->where(sprintf('%s.entity_id IS NULL', $alias));
         }
+
+        $select->columns('COUNT(DISTINCT e.entity_id) AS cnt');
 
         return (int) $this->resourceConnection->getConnection()->fetchOne($select);
     }
