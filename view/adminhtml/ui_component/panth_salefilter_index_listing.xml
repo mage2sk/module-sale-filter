@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
+    <argument name="data" xsi:type="array">
+        <item name="js_config" xsi:type="array">
+            <item name="provider" xsi:type="string">panth_salefilter_index_listing.panth_salefilter_index_listing_data_source</item>
+        </item>
+    </argument>
+    <settings>
+        <spinner>panth_salefilter_index_columns</spinner>
+        <deps>
+            <dep>panth_salefilter_index_listing.panth_salefilter_index_listing_data_source</dep>
+        </deps>
+        <buttons>
+            <button name="reindex" class="Panth\SaleFilter\Block\Adminhtml\Button\Reindex"/>
+        </buttons>
+    </settings>
+    <dataSource name="panth_salefilter_index_listing_data_source" component="Magento_Ui/js/grid/provider">
+        <settings>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">grid_id</param>
+            </storageConfig>
+            <updateUrl path="mui/index/render"/>
+        </settings>
+        <aclResource>Panth_SaleFilter::index_grid</aclResource>
+        <dataProvider name="panth_salefilter_index_listing_data_source"
+                      class="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider">
+            <settings>
+                <requestFieldName>grid_id</requestFieldName>
+                <primaryFieldName>grid_id</primaryFieldName>
+            </settings>
+        </dataProvider>
+    </dataSource>
+    <listingToolbar name="listing_top">
+        <settings>
+            <sticky>true</sticky>
+        </settings>
+        <bookmark name="bookmarks"/>
+        <columnsControls name="columns_controls"/>
+        <filterSearch name="fulltext"/>
+        <filters name="listing_filters"/>
+        <paging name="listing_paging"/>
+    </listingToolbar>
+    <columns name="panth_salefilter_index_columns">
+        <settings>
+            <storageConfig>
+                <param name="indexField" xsi:type="string">grid_id</param>
+            </storageConfig>
+        </settings>
+        <column name="grid_id">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">Row ID</label>
+                <visible>false</visible>
+            </settings>
+        </column>
+        <column name="entity_id">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Product ID</label>
+                <sorting>asc</sorting>
+            </settings>
+        </column>
+        <column name="sku">
+            <settings>
+                <filter>text</filter>
+                <label translate="true">SKU</label>
+            </settings>
+        </column>
+        <column name="product_type" component="Magento_Ui/js/grid/columns/select">
+            <settings>
+                <options class="Panth\SaleFilter\Model\Source\ProductType"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Type</label>
+            </settings>
+        </column>
+        <column name="website_id" component="Magento_Ui/js/grid/columns/select">
+            <settings>
+                <options class="Panth\SaleFilter\Model\Source\Website"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Website</label>
+            </settings>
+        </column>
+        <column name="customer_group_id" component="Magento_Ui/js/grid/columns/select">
+            <settings>
+                <options class="Panth\SaleFilter\Model\Source\CustomerGroup"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Customer Group</label>
+            </settings>
+        </column>
+        <column name="regular_price">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Regular Price</label>
+            </settings>
+        </column>
+        <column name="special_price">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Special Price</label>
+            </settings>
+        </column>
+        <column name="rule_price">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Rule Price</label>
+            </settings>
+        </column>
+        <column name="discount_percent">
+            <settings>
+                <filter>textRange</filter>
+                <label translate="true">Discount %</label>
+            </settings>
+        </column>
+        <column name="applicable_rules" component="Magento_Ui/js/grid/columns/select">
+            <settings>
+                <options class="Panth\SaleFilter\Model\Source\CatalogRule"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Active Catalog Rules</label>
+            </settings>
+        </column>
+        <column name="match_source" component="Magento_Ui/js/grid/columns/select">
+            <settings>
+                <options class="Panth\SaleFilter\Model\Source\MatchSource"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">Source</label>
+            </settings>
+        </column>
+        <column name="is_on_sale" component="Magento_Ui/js/grid/columns/select">
+            <settings>
+                <options class="Magento\Config\Model\Config\Source\Yesno"/>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <label translate="true">On Sale</label>
+            </settings>
+        </column>
+        <column name="updated_at" class="Magento\Ui\Component\Listing\Columns\Date">
+            <settings>
+                <filter>dateRange</filter>
+                <dataType>date</dataType>
+                <label translate="true">Updated At</label>
+            </settings>
+        </column>
+    </columns>
+</listing>

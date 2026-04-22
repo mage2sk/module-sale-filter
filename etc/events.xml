@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+
+    <!-- Re-apply our on-sale indexer after catalog price rules are (re)applied. -->
+    <event name="catalogrule_after_apply">
+        <observer name="panth_salefilter_catalogrule_save"
+                  instance="Panth\SaleFilter\Observer\CatalogRuleSaveAfter"/>
+    </event>
+
+    <!-- Per-product change: let the observer schedule a targeted reindex. -->
+    <event name="catalog_product_save_after">
+        <observer name="panth_salefilter_product_save"
+                  instance="Panth\SaleFilter\Observer\CatalogRuleSaveAfter"/>
+    </event>
+
+    <!-- Product delete: ensure the removed product is dropped from the index. -->
+    <event name="catalog_product_delete_after">
+        <observer name="panth_salefilter_product_delete"
+                  instance="Panth\SaleFilter\Observer\CatalogRuleSaveAfter"/>
+    </event>
+
+</config>

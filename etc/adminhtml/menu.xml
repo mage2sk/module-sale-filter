@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Panth_SaleFilter — Admin menu.
+ *
+ * Nests the Sale Filter module under the "Panth Infotech" top-level
+ * (Panth_Core::panth_extensions) and exposes two children:
+ *   - Index Grid    : UI-component listing of the raw index rows
+ *   - Configuration : jumps to the merged system.xml section
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="Panth_SaleFilter::group"
+             title="Sale Filter"
+             module="Panth_SaleFilter"
+             sortOrder="110"
+             parent="Panth_Core::panth_extensions"
+             resource="Panth_SaleFilter::group"/>
+
+        <add id="Panth_SaleFilter::index_grid"
+             title="Index Grid"
+             module="Panth_SaleFilter"
+             sortOrder="5"
+             parent="Panth_SaleFilter::group"
+             action="panth_salefilter/index/index"
+             resource="Panth_SaleFilter::index_grid"/>
+
+        <add id="Panth_SaleFilter::settings"
+             title="Configuration"
+             module="Panth_SaleFilter"
+             sortOrder="10"
+             parent="Panth_SaleFilter::group"
+             action="adminhtml/system_config/edit/section/panth_salefilter"
+             resource="Panth_SaleFilter::config"/>
+    </menu>
+</config>

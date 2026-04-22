@@ -1,0 +1,119 @@
+<?php
+declare(strict_types=1);
+
+namespace Panth\SaleFilter\Block\LayeredNavigation;
+
+use Magento\Catalog\Model\Layer\Filter\FilterInterface;
+use Magento\Catalog\Model\Layer\Resolver as LayerResolver;
+use Magento\Catalog\Model\Product as CatalogProduct;
+use Magento\CatalogRule\Model\Rule as CatalogRule;
+use Magento\Customer\Model\Session as CustomerSession;
+use Magento\Framework\App\RequestInterface;
+use Magento\Framework\DataObject\IdentityInterface;
+use Magento\Framework\View\Element\Template;
+use Magento\Store\Model\StoreManagerInterface;
+use Panth\SaleFilter\Model\Config;
+
+/**
+ * Cache-aware block wrapping the sale-filter renderer output.
+ *
+ * The block composes a cache key from store, website, customer group,
+ * currency, the current category and the active sale-filter request
+ * parameter so that the FPC can distinguish each unique filter state.
+ * It also publishes identity tags for Product, CatalogRule and the
+ * module Config entity so purges on those entities invalidate this
+ * block's cached HTML.
+ */
+class FilterRenderer extends Template implements IdentityInterface
+{
+    /**
+     * @param Template\Context       $context
+     * @param StoreManagerInterface  $storeManager
+     * @param CustomerSession        $customerSession
+     * @param RequestInterface       $request
+     * @param Config                 $config
+     * @param LayerResolver          $layerResolver
+     * @param array                  $data
+     */
+    public function __construct(
+        Template\Context $context,
+        private readonly StoreManagerInterface $storeManager,
+        private readonly CustomerSession $customerSession,
+        private readonly RequestInterface $request,
+        private readonly Config $config,
+        private readonly LayerResolver $layerResolver,
+        array $data = []
+    ) {
+        parent::__construct($context, $data);
+    }
+
+    /**
+     * Return the filter instance bound via layout XML arguments.
+     *
+     * @return FilterInterface|null
+     */
+    public function getFilter(): ?FilterInterface
+    {
+        $filter = $this->getData('filter');
+
+        return $filter instanceof FilterInterface ? $filter : null;
+    }
+
+    /**
+     * Return the configured filter label.
+     *
+     * @return string
+     */
+    public function getFilterLabel(): string
+    {
+        return $this->config->getFilterLabel();
+    }
+
+    /**
+     * Whether the product count should be shown next to the filter option.
+     *
+     * @return bool
+     */
+    public function isShowCount(): bool
+    {
+        return $this->config->isShowCount();
+    }
+
+    /**
+     * Compose cache key components varying per store, website, customer
+     * group, currency, current category and active sale-filter param.
+     *
+     * @return array
+     */
+    public function getCacheKeyInfo(): array
+    {
+        $store    = $this->storeManager->getStore();
+        $category = $this->layerResolver->get()->getCurrentCategory();
+        $categoryId = $category ? (int) $category->getId() : 0;
+
+        return array_merge(parent::getCacheKeyInfo(), [
+            'MAGE2SK_SALEFILTER',
+            (int) $store->getId(),
+            (int) $store->getWebsiteId(),
+            (int) $this->customerSession->getCustomerGroupId(),
+            (string) $store->getCurrentCurrencyCode(),
+            $categoryId,
+            (string) ($this->request->getParam(Config::FILTER_REQUEST_VAR) ?? '0'),
+        ]);
+    }
+
+    /**
+     * Return cache tags this block depends on so FPC purges on related
+     * entity changes invalidate the cached HTML.
+     *
+     * @return string[]
+     */
+    public function getIdentities(): array
+    {
+        return [
+            CatalogProduct::CACHE_TAG,
+            CatalogRule::CACHE_TAG,
+            Config::CACHE_TAG,
+        ];
+    }
+}

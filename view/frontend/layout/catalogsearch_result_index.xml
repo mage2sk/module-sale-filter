@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Panth_SaleFilter: search result page. Same behaviour as category pages —
+ * the plugin on Magento\Catalog\Model\Layer\Search\FilterList adds our filter
+ * into the layered-nav list so it renders alongside attribute filters.
+ */
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body/>
+</page>

@@ -1,0 +1,19 @@
+{
+    "panth_salefilter_product_index": {
+        "column": {
+            "entity_id": true,
+            "customer_group_id": true,
+            "website_id": true,
+            "is_on_sale": true,
+            "updated_at": true
+        },
+        "index": {
+            "PANTH_SALEFILTER_PRODUCT_INDEX_WEBSITE_ID_CUSTOMER_GROUP_ID_IS_ON_SALE": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "PANTH_SALEFILTER_PRODUCT_INDEX_ENTITY_ID_CATALOG_PRODUCT_ENTITY_ENTITY_ID": true,
+            "PANTH_SALEFILTER_PRODUCT_INDEX_WEBSITE_ID_STORE_WEBSITE_WEBSITE_ID": true
+        }
+    }
+}

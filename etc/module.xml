@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Module/etc/module.xsd">
+    <module name="Panth_SaleFilter" setup_version="1.0.0">
+        <sequence>
+            <module name="Panth_Core"/>
+            <module name="Magento_Catalog"/>
+            <module name="Magento_CatalogRule"/>
+            <module name="Magento_CatalogSearch"/>
+            <module name="Magento_LayeredNavigation"/>
+            <module name="Magento_ConfigurableProduct"/>
+            <module name="Magento_GroupedProduct"/>
+            <module name="Magento_Bundle"/>
+        </sequence>
+    </module>
+</config>

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <panth_salefilter>
+            <general>
+                <enabled>1</enabled>
+                <filter_label>Sale Status</filter_label>
+                <option_label_on_sale>On Sale</option_label_on_sale>
+                <show_not_on_sale_option>0</show_not_on_sale_option>
+                <option_label_not_on_sale>Regular Price</option_label_not_on_sale>
+                <show_count>1</show_count>
+                <include_special_prices>1</include_special_prices>
+                <include_catalog_rules>1</include_catalog_rules>
+                <position>100</position>
+            </general>
+        </panth_salefilter>
+    </default>
+</config>

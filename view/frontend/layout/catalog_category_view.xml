@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Panth_SaleFilter: default Luma/Hyvä-agnostic category layout.
+ *
+ * The "On Sale" filter is injected into Magento's layered-nav filter list via
+ * the FilterListPlugin (see etc/di.xml), so the stock
+ * \Magento\LayeredNavigation\Block\Navigation\FilterRenderer renders it with
+ * the theme's filter template automatically. No additional block is required.
+ *
+ * Custom-branded rendering is available: drop our FilterRenderer block in via
+ * your theme's layout override and point its template at
+ * Panth_SaleFilter::layer/filter/sale.phtml.
+ */
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body/>
+</page>

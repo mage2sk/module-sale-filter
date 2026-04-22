@@ -1,0 +1,56 @@
+{
+    "name": "mage2kishan/module-sale-filter",
+    "description": "Panth Sale Filter — \"On Sale\" layered navigation filter for Magento 2, backed by a custom indexer that respects catalog rules, special prices, customer groups, websites, and all product types (simple, configurable, grouped, bundle, virtual, downloadable). Hyva and Luma compatible.",
+    "type": "magento2-module",
+    "version": "1.0.0",
+    "license": "proprietary",
+    "keywords": [
+        "magento2",
+        "magento2-module",
+        "layered-navigation",
+        "sale-filter",
+        "seo",
+        "panth"
+    ],
+    "homepage": "https://kishansavaliya.com",
+    "support": {
+        "email": "kishansavaliyakb@gmail.com",
+        "source": "https://kishansavaliya.com"
+    },
+    "authors": [
+        {
+            "name": "Kishan Savaliya",
+            "email": "kishansavaliyakb@gmail.com",
+            "homepage": "https://kishansavaliya.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "~8.1.0||~8.2.0||~8.3.0||~8.4.0",
+        "mage2kishan/module-core": "^1.0",
+        "magento/framework": "^103.0",
+        "magento/module-catalog": "^104.0",
+        "magento/module-catalog-rule": "^101.2",
+        "magento/module-catalog-search": "^102.0",
+        "magento/module-layered-navigation": "^100.4",
+        "magento/module-configurable-product": "^100.4",
+        "magento/module-grouped-product": "^100.4",
+        "magento/module-bundle": "^101.0",
+        "magento/module-store": "^101.1",
+        "magento/module-eav": "^102.1",
+        "magento/module-backend": "^102.0",
+        "magento/module-ui": "^101.2"
+    },
+    "suggest": {
+        "mage2kishan/module-sale-filter-hyva": "For Hyvä-branded Alpine template and Appearance admin group.",
+        "hyva-themes/magento2-default-theme": "For Hyvä frontend compatibility (no jQuery, TailwindCSS, AlpineJS)."
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "Panth\\SaleFilter\\": ""
+        }
+    }
+}

@@ -1,0 +1,40 @@
+<?php
+/**
+ * Panth_SaleFilter — Luma filter template.
+ *
+ * Optional custom render of the "On Sale" filter block. Drop this template in
+ * via your layout XML to get branded styling; otherwise Magento's stock
+ * layered-nav FilterRenderer picks up the filter and renders it with the
+ * theme's default filter template.
+ *
+ * @var \Panth\SaleFilter\Block\LayeredNavigation\FilterRenderer $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$filter = $block->getFilter();
+if ($filter === null) {
+    return;
+}
+$items = $filter->getItems();
+if ($items === []) {
+    return;
+}
+$showCount = $block->isShowCount();
+?>
+<div class="filter-options-item panth-salefilter">
+    <div class="filter-options-title"><?= $escaper->escapeHtml($block->getFilterLabel()) ?></div>
+    <div class="filter-options-content">
+        <ol class="items">
+            <?php foreach ($items as $item): ?>
+                <li class="item">
+                    <a href="<?= $escaper->escapeUrl($item->getUrl()) ?>">
+                        <?= $escaper->escapeHtml($item->getLabel()) ?>
+                        <?php if ($showCount): ?>
+                            <span class="count">(<?= (int) $item->getCount() ?>)</span>
+                        <?php endif; ?>
+                    </a>
+                </li>
+            <?php endforeach; ?>
+        </ol>
+    </div>
+</div>

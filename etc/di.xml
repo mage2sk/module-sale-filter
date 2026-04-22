@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!-- Add the "On Sale" filter to layered navigation on catalog listing pages -->
+    <type name="Magento\Catalog\Model\Layer\FilterList">
+        <plugin name="panth_salefilter_filterlist_plugin"
+                type="Panth\SaleFilter\Plugin\Catalog\Model\Layer\FilterListPlugin"
+                sortOrder="10"/>
+    </type>
+
+    <!-- Same plugin on the search-result layered navigation so the filter also
+         appears on search pages (spec §"Edge Cases" #12). -->
+    <type name="Magento\Catalog\Model\Layer\Search\FilterList">
+        <plugin name="panth_salefilter_search_filterlist_plugin"
+                type="Panth\SaleFilter\Plugin\Catalog\Model\Layer\FilterListPlugin"
+                sortOrder="10"/>
+    </type>
+
+    <!-- Console commands -->
+    <type name="Magento\Framework\Console\CommandList">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="panth_salefilter_reindex" xsi:type="object">Panth\SaleFilter\Console\Command\ReindexCommand</item>
+                <item name="panth_salefilter_status" xsi:type="object">Panth\SaleFilter\Console\Command\StatusCommand</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <!-- Admin grid UI-component data provider. Uses the real Collection class
+         (not a virtualType), with explicit storageConfig/indexField so the
+         UI component receives a flat list keyed on the synthetic `grid_id`. -->
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="panth_salefilter_index_listing_data_source" xsi:type="string">
+                    Panth\SaleFilter\Model\ResourceModel\Index\Collection
+                </item>
+            </argument>
+        </arguments>
+    </type>
+
+    <type name="Panth\SaleFilter\Model\ResourceModel\Index\Collection">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">panth_salefilter_product_index</argument>
+            <argument name="resourceModel" xsi:type="string">Panth\SaleFilter\Model\ResourceModel\Index</argument>
+        </arguments>
+    </type>
+
+</config>
