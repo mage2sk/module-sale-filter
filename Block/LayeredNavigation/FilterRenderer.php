@@ -6,7 +6,8 @@ namespace Panth\SaleFilter\Block\LayeredNavigation;
 use Magento\Catalog\Model\Layer\Filter\FilterInterface;
 use Magento\Catalog\Model\Layer\Resolver as LayerResolver;
 use Magento\Catalog\Model\Product as CatalogProduct;
-use Magento\Customer\Model\Session as CustomerSession;
+use Magento\Customer\Model\Context as CustomerContext;
+use Magento\Framework\App\Http\Context as HttpContext;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\DataObject\IdentityInterface;
 use Magento\Framework\View\Element\Template;
@@ -26,18 +27,18 @@ use Panth\SaleFilter\Model\Config;
 class FilterRenderer extends Template implements IdentityInterface
 {
     /**
-     * @param Template\Context       $context
-     * @param StoreManagerInterface  $storeManager
-     * @param CustomerSession        $customerSession
-     * @param RequestInterface       $request
-     * @param Config                 $config
-     * @param LayerResolver          $layerResolver
-     * @param array                  $data
+     * Customer group in the cache key comes from {@see HttpContext}
+     * (populated by Magento's `customer-app-action-executeController-context-plugin`)
+     * rather than the customer session because
+     * {@see \Magento\Customer\Model\Layout\DepersonalizePlugin} wipes the
+     * session to guest BEFORE cacheable pages render. Using HTTP Context
+     * keeps the block cache key aligned with the FPC's X-Magento-Vary
+     * hash, so each customer group reliably sees its own rendered filter.
      */
     public function __construct(
         Template\Context $context,
         private readonly StoreManagerInterface $storeManager,
-        private readonly CustomerSession $customerSession,
+        private readonly HttpContext $httpContext,
         private readonly RequestInterface $request,
         private readonly Config $config,
         private readonly LayerResolver $layerResolver,
@@ -94,7 +95,7 @@ class FilterRenderer extends Template implements IdentityInterface
             'MAGE2SK_SALEFILTER',
             (int) $store->getId(),
             (int) $store->getWebsiteId(),
-            (int) $this->customerSession->getCustomerGroupId(),
+            (int) $this->httpContext->getValue(CustomerContext::CONTEXT_GROUP),
             (string) $store->getCurrentCurrencyCode(),
             $categoryId,
             (string) ($this->request->getParam(Config::FILTER_REQUEST_VAR) ?? '0'),

@@ -12,7 +12,8 @@ use Magento\Catalog\Model\Layer\Filter\ItemFactory;
 use Magento\Catalog\Model\Product\Attribute\Source\Status as ProductStatus;
 use Magento\Catalog\Model\Product\Visibility as ProductVisibility;
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductCollectionFactory;
-use Magento\Customer\Model\Session as CustomerSession;
+use Magento\Customer\Model\Context as CustomerContext;
+use Magento\Framework\App\Http\Context as HttpContext;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Store\Model\StoreManagerInterface;
@@ -42,24 +43,18 @@ use Psr\Log\LoggerInterface;
 class SaleFilter extends AbstractFilter
 {
     /**
-     * @param ItemFactory $filterItemFactory
-     * @param StoreManagerInterface $storeManager
-     * @param Layer $layer
-     * @param DataBuilder $itemDataBuilder
-     * @param CustomerSession $customerSession
-     * @param ResourceConnection $resourceConnection
-     * @param Config $config
-     * @param LoggerInterface $logger
-     * @param ProductCollectionFactory $productCollectionFactory
-     * @param ProductVisibility $productVisibility
-     * @param array<string, mixed> $data
+     * Customer group is resolved via {@see HttpContext} rather than the
+     * customer session — Magento's {@see \Magento\Customer\Model\Layout\DepersonalizePlugin}
+     * wipes the session to guest for cacheable pages, so the session
+     * always reports group 0 here. HTTP Context keeps the real group id
+     * and matches the per-group X-Magento-Vary FPC entry.
      */
     public function __construct(
         ItemFactory $filterItemFactory,
         StoreManagerInterface $storeManager,
         Layer $layer,
         DataBuilder $itemDataBuilder,
-        private readonly CustomerSession $customerSession,
+        private readonly HttpContext $httpContext,
         private readonly ResourceConnection $resourceConnection,
         private readonly Config $config,
         private readonly LoggerInterface $logger,
@@ -226,7 +221,7 @@ class SaleFilter extends AbstractFilter
     {
         $connection      = $this->resourceConnection->getConnection();
         $table           = $this->resourceConnection->getTableName('panth_salefilter_product_index');
-        $customerGroupId = (int) $this->customerSession->getCustomerGroupId();
+        $customerGroupId = (int) $this->httpContext->getValue(CustomerContext::CONTEXT_GROUP);
         $websiteId       = (int) $this->_storeManager->getStore()->getWebsiteId();
 
         $select = $connection->select()

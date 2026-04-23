@@ -9,7 +9,8 @@ use Magento\Catalog\Model\Product\Attribute\Source\Status as ProductStatus;
 use Magento\Catalog\Model\Product\Visibility as ProductVisibility;
 use Magento\Catalog\Model\ResourceModel\Product\Collection as ProductCollection;
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductCollectionFactory;
-use Magento\Customer\Model\Session as CustomerSession;
+use Magento\Customer\Model\Context as CustomerContext;
+use Magento\Framework\App\Http\Context as HttpContext;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\ResourceConnection;
 use Magento\Store\Model\StoreManagerInterface;
@@ -60,20 +61,22 @@ class ApplySaleFilterPlugin
     public const COUNT_FLAG   = 'panth_salefilter_size';
 
     /**
-     * @param RequestInterface $request
-     * @param Config $config
-     * @param ResourceConnection $resourceConnection
-     * @param StoreManagerInterface $storeManager
-     * @param CustomerSession $customerSession
-     * @param ProductVisibility $productVisibility
-     * @param LoggerInterface $logger
+     * Customer group is read from {@see HttpContext} rather than the
+     * customer session because Magento's {@see \Magento\Customer\Model\Layout\DepersonalizePlugin}
+     * resets the customer session to guest BEFORE cacheable pages render,
+     * so `$customerSession->getCustomerGroupId()` always returns 0 during
+     * category view. The HTTP Context value is populated by
+     * {@see \Magento\Customer\Model\App\Action\ContextPlugin::beforeExecute}
+     * and survives depersonalization — matching what the FPC's X-Magento-Vary
+     * cookie is hashed from, so per-group filter output is consistent with
+     * the per-group FPC cache entry.
      */
     public function __construct(
         private readonly RequestInterface $request,
         private readonly Config $config,
         private readonly ResourceConnection $resourceConnection,
         private readonly StoreManagerInterface $storeManager,
-        private readonly CustomerSession $customerSession,
+        private readonly HttpContext $httpContext,
         private readonly ProductVisibility $productVisibility,
         private readonly ProductCollectionFactory $productCollectionFactory,
         private readonly LoggerInterface $logger
@@ -229,7 +232,7 @@ class ApplySaleFilterPlugin
     {
         $connection      = $this->resourceConnection->getConnection();
         $table           = $this->resourceConnection->getTableName('panth_salefilter_product_index');
-        $customerGroupId = (int) $this->customerSession->getCustomerGroupId();
+        $customerGroupId = (int) $this->httpContext->getValue(CustomerContext::CONTEXT_GROUP);
         $websiteId       = (int) $this->storeManager->getStore()->getWebsiteId();
 
         $select = $connection->select()
