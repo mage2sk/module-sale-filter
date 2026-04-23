@@ -2,6 +2,26 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
 
+    <!-- Replace the default search-result appliers with our filter-aware
+         version. It behaves identically to core when no sale_filter is
+         active, and slices our pre-resolved on-sale id list BEFORE paging
+         when sale_filter is active — so page 1 genuinely shows the first N
+         filtered products instead of (ES page slice) ∩ (on-sale).
+
+         The interface preference alone isn't enough: the ES module's
+         `SearchResultApplierFactory` virtualType hard-codes the concrete ES
+         applier as its instanceName, so preferences on the concrete class
+         are the only ones Magento actually honours in the factory path.
+         We preference all three (interface + both concrete defaults) so the
+         swap works regardless of which search engine is active. -->
+    <preference for="Magento\CatalogSearch\Model\ResourceModel\Fulltext\Collection\SearchResultApplierInterface"
+                type="Panth\SaleFilter\Model\ResourceModel\Fulltext\Collection\SearchResultApplier"/>
+    <preference for="Magento\CatalogSearch\Model\ResourceModel\Fulltext\Collection\SearchResultApplier"
+                type="Panth\SaleFilter\Model\ResourceModel\Fulltext\Collection\SearchResultApplier"/>
+    <preference for="Magento\Elasticsearch\Model\ResourceModel\Fulltext\Collection\SearchResultApplier"
+                type="Panth\SaleFilter\Model\ResourceModel\Fulltext\Collection\SearchResultApplier"/>
+
+
     <!-- Add the "On Sale" filter to layered navigation on catalog listing pages -->
     <type name="Magento\Catalog\Model\Layer\FilterList">
         <plugin name="panth_salefilter_filterlist_plugin"
@@ -16,6 +36,38 @@
                 type="Panth\SaleFilter\Plugin\Catalog\Model\Layer\FilterListPlugin"
                 sortOrder="10"/>
     </type>
+
+    <!-- Apply the active sale_filter param to the product collection as early
+         as possible — on the very first Layer::getProductCollection() call,
+         ahead of the toolbar's getSize() so the pager reports the post-filter
+         "N of M". AbstractFilter::apply() fires too late, after the toolbar
+         has already cached the unfiltered total. -->
+    <type name="Magento\Catalog\Model\Layer\Category">
+        <plugin name="panth_salefilter_apply_category"
+                type="Panth\SaleFilter\Plugin\Catalog\Model\Layer\ApplySaleFilterPlugin"
+                sortOrder="10"/>
+    </type>
+    <type name="Magento\Catalog\Model\Layer\Search">
+        <plugin name="panth_salefilter_apply_search"
+                type="Panth\SaleFilter\Plugin\Catalog\Model\Layer\ApplySaleFilterPlugin"
+                sortOrder="10"/>
+    </type>
+
+    <!-- Replace the cached toolbar total with our pre-computed post-filter
+         size. Registered on the concrete Fulltext collection (the default
+         storefront collection in 2.4+) and on the base Catalog product
+         collection for completeness. -->
+    <type name="Magento\CatalogSearch\Model\ResourceModel\Fulltext\Collection">
+        <plugin name="panth_salefilter_fulltext_getsize"
+                type="Panth\SaleFilter\Plugin\Catalog\Model\ResourceModel\Product\GetSizePlugin"
+                sortOrder="10"/>
+    </type>
+    <type name="Magento\Catalog\Model\ResourceModel\Product\Collection">
+        <plugin name="panth_salefilter_product_getsize"
+                type="Panth\SaleFilter\Plugin\Catalog\Model\ResourceModel\Product\GetSizePlugin"
+                sortOrder="10"/>
+    </type>
+
 
     <!-- Console commands -->
     <type name="Magento\Framework\Console\CommandList">

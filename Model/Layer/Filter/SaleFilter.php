@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Panth\SaleFilter\Model\Layer\Filter;
 
 use Panth\SaleFilter\Model\Config;
+use Panth\SaleFilter\Plugin\Catalog\Model\Layer\ApplySaleFilterPlugin;
 use Magento\Catalog\Model\Layer;
 use Magento\Catalog\Model\Layer\Filter\AbstractFilter;
 use Magento\Catalog\Model\Layer\Filter\Item\DataBuilder;
@@ -14,7 +15,6 @@ use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductColl
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\ResourceConnection;
-use Magento\Framework\DB\Select;
 use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -23,20 +23,37 @@ use Psr\Log\LoggerInterface;
  * table.
  *
  * Two modes are supported via config (panth_salefilter/general/show_not_on_sale_option):
- *   - single option  (default): shows only the "On Sale" option
- *   - two options             : adds a second "Regular Price" (not-on-sale) option
- *     so shoppers can toggle between discounted and full-price products.
+ *   - single option  (default): shows only the "On Sale" option.
+ *   - two options             : adds a "Regular" (not-on-sale) option so
+ *     shoppers can toggle between discounted and full-price products.
  *
  * The request param {@code sale_filter} holds the selection:
- *   - "1" -> constrain the layer's product collection to on-sale rows
+ *   - "1" -> constrain the layer's collection to on-sale rows
  *   - "0" -> constrain it to NOT-on-sale rows (only honored when the
  *            "Show Not On Sale Option" config is enabled)
  *
- * Filtering is an INNER/LEFT JOIN against the index table (never a correlated
- * subquery) so pagination and facet counts remain intact.
+ * The heavy lifting (computing the filtered id set, tagging the collection,
+ * supplying a post-filter size) is done by {@see ApplySaleFilterPlugin} which
+ * runs on every `Layer::getProductCollection()` call — early enough to beat
+ * the toolbar's `getSize()`. This `apply()` method only registers the state
+ * filter item that powers the "Now Shopping by" chip and the sidebar's
+ * "hide options when active" logic.
  */
 class SaleFilter extends AbstractFilter
 {
+    /**
+     * @param ItemFactory $filterItemFactory
+     * @param StoreManagerInterface $storeManager
+     * @param Layer $layer
+     * @param DataBuilder $itemDataBuilder
+     * @param CustomerSession $customerSession
+     * @param ResourceConnection $resourceConnection
+     * @param Config $config
+     * @param LoggerInterface $logger
+     * @param ProductCollectionFactory $productCollectionFactory
+     * @param ProductVisibility $productVisibility
+     * @param array<string, mixed> $data
+     */
     public function __construct(
         ItemFactory $filterItemFactory,
         StoreManagerInterface $storeManager,
@@ -61,7 +78,12 @@ class SaleFilter extends AbstractFilter
     }
 
     /**
-     * Apply the selected option to the layer's product collection.
+     * Register the selected option as an active state filter so that the
+     * "Now Shopping by" block shows a removable chip and `_getItemsData()`
+     * knows to hide both options while the filter is active.
+     *
+     * @param RequestInterface $request
+     * @return $this
      */
     public function apply(RequestInterface $request)
     {
@@ -75,50 +97,14 @@ class SaleFilter extends AbstractFilter
             return $this;
         }
 
-        // "Not on sale" is only honored when admin enabled that option.
         if ($value === Config::VALUE_NOT_ON_SALE && !$this->config->isShowNotOnSaleOption()) {
             return $this;
         }
 
         try {
-            $websiteId       = (int) $this->_storeManager->getStore()->getWebsiteId();
-            $customerGroupId = (int) $this->customerSession->getCustomerGroupId();
-
-            $collection = $this->getLayer()->getProductCollection();
-            $table      = $this->resourceConnection->getTableName('panth_salefilter_product_index');
-
-            if ($value === Config::VALUE_ON_SALE) {
-                // INNER JOIN against the index — returns only on-sale products.
-                $collection->getSelect()->join(
-                    ['salefilter_idx' => $table],
-                    sprintf(
-                        'salefilter_idx.entity_id = e.entity_id'
-                        . ' AND salefilter_idx.customer_group_id = %d'
-                        . ' AND salefilter_idx.website_id = %d'
-                        . ' AND salefilter_idx.is_on_sale = 1',
-                        $customerGroupId,
-                        $websiteId
-                    ),
-                    []
-                );
-                $label = $this->config->getOnSaleOptionLabel();
-            } else {
-                // LEFT JOIN + NULL check — returns products missing from the index,
-                // i.e. not on sale for this (group, website).
-                $collection->getSelect()->joinLeft(
-                    ['salefilter_idx' => $table],
-                    sprintf(
-                        'salefilter_idx.entity_id = e.entity_id'
-                        . ' AND salefilter_idx.customer_group_id = %d'
-                        . ' AND salefilter_idx.website_id = %d'
-                        . ' AND salefilter_idx.is_on_sale = 1',
-                        $customerGroupId,
-                        $websiteId
-                    ),
-                    []
-                )->where('salefilter_idx.entity_id IS NULL');
-                $label = $this->config->getNotOnSaleOptionLabel();
-            }
+            $label = $value === Config::VALUE_ON_SALE
+                ? $this->config->getOnSaleOptionLabel()
+                : $this->config->getNotOnSaleOptionLabel();
 
             /** @var \Magento\Catalog\Model\Layer\Filter\Item $filterItem */
             $filterItem = $this->_filterItemFactory->create()
@@ -139,7 +125,7 @@ class SaleFilter extends AbstractFilter
     }
 
     /**
-     * Filter header title (renders above the option list and in breadcrumbs).
+     * @return string
      */
     public function getName()
     {
@@ -149,20 +135,27 @@ class SaleFilter extends AbstractFilter
     /**
      * Build the sidebar items (options) for this filter.
      *
-     * Always emits the "On Sale" option when count > 0. When the admin has
-     * enabled the toggle, also emits the "Not On Sale" option when it would
-     * match products in the current layer.
+     * Emits the "On Sale" option when at least one on-sale product exists in
+     * the current layer's scope. When the admin has enabled the toggle, also
+     * emits the "Not On Sale" option with the remainder-of-scope count.
      *
      * @return array<int, array{label: string, value: int, count: int}>
      */
     protected function _getItemsData()
     {
         try {
-            // If this filter has already been applied, hide the options.
             foreach ($this->getLayer()->getState()->getFilters() as $filter) {
                 if ($filter->getFilter() === $this) {
                     return [];
                 }
+            }
+
+            // If the plugin has already stashed a count on the layer's
+            // collection, the page IS the filtered result — hide both options
+            // (they'd just offer to swap to the already-active choice).
+            $collection = $this->getLayer()->getProductCollection();
+            if ($collection->getFlag(ApplySaleFilterPlugin::COUNT_FLAG) !== null) {
+                return [];
             }
 
             $items = [];
@@ -176,11 +169,6 @@ class SaleFilter extends AbstractFilter
                 ];
             }
 
-            // "Not on sale" option only surfaces when
-            //   (a) the admin toggle is enabled, AND
-            //   (b) there is at least one regular-priced product in the
-            //       current layer (clicking a zero-count option just
-            //       yields an empty grid, so hide it).
             if ($this->config->isShowNotOnSaleOption()) {
                 $notOnSaleCount = $this->countForScope(false);
                 if ($notOnSaleCount > 0) {
@@ -204,18 +192,15 @@ class SaleFilter extends AbstractFilter
     }
 
     /**
-     * Count products in the current layer that ARE or are NOT on sale.
+     * Count products in the current layer's scope that ARE or are NOT on sale.
      *
      * Builds a fresh, non-paginated product collection scoped to the current
      * category / visibility / status — cloning the layer's product collection
-     * would inherit the toolbar's `entity_id IN (page-slice)` WHERE clause,
-     * so both on-sale and not-on-sale counts would only see the visible page
-     * (e.g. 12 of 24 products).
+     * would inherit the toolbar's page-slice WHERE and cap counts at page
+     * size.
      *
-     * Uses a per-scope alias so successive on-sale + not-on-sale calls in
-     * the same request never collide on correlation name.
-     *
-     * @param bool $onSale true counts on-sale, false counts not-on-sale.
+     * @param bool $onSale
+     * @return int
      */
     private function countForScope(bool $onSale): int
     {
@@ -228,34 +213,28 @@ class SaleFilter extends AbstractFilter
             $collection->addCategoryFilter($category);
         }
 
-        $select = clone $collection->getSelect();
-        $select->reset(Select::COLUMNS);
-        $select->reset(Select::ORDER);
-        $select->reset(Select::LIMIT_COUNT);
-        $select->reset(Select::LIMIT_OFFSET);
+        $onSaleIds = $this->fetchOnSaleIds() ?: [0];
+        $collection->addFieldToFilter('entity_id', [$onSale ? 'in' : 'nin' => $onSaleIds]);
 
+        return (int) $collection->getSize();
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function fetchOnSaleIds(): array
+    {
+        $connection      = $this->resourceConnection->getConnection();
+        $table           = $this->resourceConnection->getTableName('panth_salefilter_product_index');
         $customerGroupId = (int) $this->customerSession->getCustomerGroupId();
         $websiteId       = (int) $this->_storeManager->getStore()->getWebsiteId();
-        $table           = $this->resourceConnection->getTableName('panth_salefilter_product_index');
-        $alias           = $onSale ? 'panth_sf_yes' : 'panth_sf_no';
 
-        $join = sprintf(
-            '%s.entity_id = e.entity_id'
-            . ' AND %s.customer_group_id = %d'
-            . ' AND %s.website_id = %d'
-            . ' AND %s.is_on_sale = 1',
-            $alias, $alias, $customerGroupId, $alias, $websiteId, $alias
-        );
+        $select = $connection->select()
+            ->from(['idx' => $table], ['entity_id'])
+            ->where('idx.customer_group_id = ?', $customerGroupId)
+            ->where('idx.website_id = ?', $websiteId)
+            ->where('idx.is_on_sale = ?', 1);
 
-        if ($onSale) {
-            $select->join([$alias => $table], $join, []);
-        } else {
-            $select->joinLeft([$alias => $table], $join, [])
-                ->where(sprintf('%s.entity_id IS NULL', $alias));
-        }
-
-        $select->columns('COUNT(DISTINCT e.entity_id) AS cnt');
-
-        return (int) $this->resourceConnection->getConnection()->fetchOne($select);
+        return array_map('intval', $connection->fetchCol($select));
     }
 }
