@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Panth_SaleFilter — "How It Works" admin doc page layout.
+ *
+ * Renders a single full-width content block under the standard admin
+ * chrome (top bar, menu, footer). No UI components — a plain template
+ * block keeps the page fast to load and avoids the `ui_component` XSD
+ * overhead for a static doc view.
+ */
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      layout="admin-1column"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceContainer name="content">
+            <block class="Panth\SaleFilter\Block\Adminhtml\Help\Page"
+                   name="panth_salefilter.help.page"
+                   template="Panth_SaleFilter::help/page.phtml"/>
+        </referenceContainer>
+    </body>
+</page>

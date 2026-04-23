@@ -34,5 +34,13 @@
              parent="Panth_SaleFilter::group"
              action="adminhtml/system_config/edit/section/panth_salefilter"
              resource="Panth_SaleFilter::config"/>
+
+        <add id="Panth_SaleFilter::help"
+             title="How It Works"
+             module="Panth_SaleFilter"
+             sortOrder="15"
+             parent="Panth_SaleFilter::group"
+             action="panth_salefilter/help/index"
+             resource="Panth_SaleFilter::help"/>
     </menu>
 </config>

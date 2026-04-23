@@ -1,0 +1,594 @@
+<?php
+/**
+ * Panth_SaleFilter — "How It Works" admin documentation view.
+ *
+ * @var \Panth\SaleFilter\Block\Adminhtml\Help\Page $block
+ * @var \Magento\Framework\Escaper                   $escaper
+ */
+?>
+<style>
+    .psf-doc { max-width: 1100px; margin: 0 auto; padding: 10px 24px 60px; color: #303030; }
+    .psf-doc h1 { font-size: 28px; font-weight: 600; margin: 14px 0 4px; color: #1979c3; }
+    .psf-doc h2 { font-size: 22px; font-weight: 600; margin: 36px 0 10px; padding-bottom: 8px; border-bottom: 2px solid #e5e5e5; color: #303030; }
+    .psf-doc h3 { font-size: 17px; font-weight: 600; margin: 22px 0 8px; color: #303030; }
+    .psf-doc p { line-height: 1.6; margin: 8px 0 12px; }
+    .psf-doc ul, .psf-doc ol { line-height: 1.7; margin: 8px 0 14px 22px; }
+    .psf-doc li { margin-bottom: 4px; }
+    .psf-doc code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 12.5px; color: #8b0000; }
+    .psf-doc pre { background: #2d2d2d; color: #f8f8f2; padding: 14px 18px; border-radius: 5px; overflow-x: auto; font-family: "SFMono-Regular", Consolas, monospace; font-size: 12.5px; line-height: 1.55; margin: 12px 0; }
+    .psf-doc pre code { background: transparent; color: inherit; padding: 0; font-size: inherit; }
+    .psf-doc .psf-tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .psf-doc .psf-tag-yes { background: #d4edda; color: #155724; }
+    .psf-doc .psf-tag-no { background: #f8d7da; color: #721c24; }
+    .psf-doc .psf-tag-partial { background: #fff3cd; color: #856404; }
+    .psf-doc .psf-tag-info { background: #d1ecf1; color: #0c5460; }
+    .psf-doc table.psf-table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+    .psf-doc table.psf-table th { background: #1979c3; color: #fff; text-align: left; padding: 10px 14px; font-weight: 600; font-size: 13px; }
+    .psf-doc table.psf-table td { padding: 10px 14px; border-bottom: 1px solid #e5e5e5; font-size: 13.5px; vertical-align: top; }
+    .psf-doc table.psf-table tr:nth-child(even) td { background: #fafafa; }
+    .psf-doc table.psf-table tr:hover td { background: #f0f7fc; }
+    .psf-doc .psf-callout { background: #fff8e1; border-left: 4px solid #f9a825; padding: 12px 16px; margin: 14px 0; border-radius: 0 4px 4px 0; }
+    .psf-doc .psf-callout-info { background: #e3f2fd; border-left-color: #1976d2; }
+    .psf-doc .psf-callout-danger { background: #fde7e9; border-left-color: #c62828; }
+    .psf-doc .psf-callout-success { background: #e8f5e9; border-left-color: #388e3c; }
+    .psf-doc .psf-toc { background: #f5f5f5; padding: 16px 20px; border-radius: 6px; margin: 14px 0 26px; border: 1px solid #e5e5e5; }
+    .psf-doc .psf-toc h3 { margin-top: 0; font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 0.8px; }
+    .psf-doc .psf-toc ol { margin-bottom: 0; columns: 2; -webkit-columns: 2; -moz-columns: 2; }
+    .psf-doc .psf-toc a { color: #1979c3; text-decoration: none; }
+    .psf-doc .psf-toc a:hover { text-decoration: underline; }
+    .psf-doc .psf-meta { background: #fafafa; padding: 12px 16px; border-radius: 5px; font-size: 12.5px; color: #666; border: 1px solid #e5e5e5; display: inline-block; margin: 6px 0 12px; }
+    .psf-doc .psf-meta strong { color: #303030; }
+    .psf-doc .psf-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0; }
+    .psf-doc .psf-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 14px 18px; }
+    .psf-doc .psf-card h3 { margin-top: 0; color: #1979c3; }
+    .psf-doc .psf-card p:last-child { margin-bottom: 0; }
+    .psf-doc .psf-footer { margin-top: 46px; padding: 28px 32px; background: linear-gradient(135deg, #1979c3 0%, #136aad 100%); color: #fff; border-radius: 8px; }
+    .psf-doc .psf-footer h2 { border: none; color: #fff; margin-top: 0; }
+    .psf-doc .psf-footer a { color: #fff; text-decoration: underline; font-weight: 600; }
+    .psf-doc .psf-footer .psf-links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; margin-top: 14px; }
+    .psf-doc .psf-footer .psf-links div { padding: 6px 0; }
+    .psf-doc .psf-footer .psf-links strong { display: inline-block; min-width: 100px; color: #e3f2fd; }
+</style>
+
+<div class="psf-doc">
+
+    <h1>Sale Filter — How It Works</h1>
+    <div class="psf-meta">
+        <strong>Module:</strong> Panth_SaleFilter v<?= $escaper->escapeHtml($block->getModuleVersion()) ?>
+        &nbsp;&middot;&nbsp;
+        <strong>Hyvä Adapter:</strong> Panth_SaleFilterHyva v<?= $escaper->escapeHtml($block->getHyvaModuleVersion()) ?>
+        &nbsp;&middot;&nbsp;
+        <strong>Last reindex:</strong> see <a href="<?= $escaper->escapeUrl($block->getIndexerUrl()) ?>">Index Management</a>
+    </div>
+
+    <p>
+        <strong>Panth Sale Filter</strong> adds an <em>"On Sale"</em> option to the
+        storefront's layered navigation on every category and search-result page.
+        Unlike the stock "price decline" hint, this filter looks at the full pricing
+        pipeline (catalog rules, special prices, date windows, per-group scoping)
+        and caches the result in a dedicated index table so the sidebar stays fast
+        even on very large catalogs.
+    </p>
+
+    <div class="psf-toc">
+        <h3>Contents</h3>
+        <ol>
+            <li><a href="#psf-what">What it does</a></li>
+            <li><a href="#psf-sources">Data sources &mdash; what counts as "on sale"</a></li>
+            <li><a href="#psf-groups">Per-customer-group behavior</a></li>
+            <li><a href="#psf-cache">Cache behavior</a></li>
+            <li><a href="#psf-indexer">Indexer modes &amp; reindex triggers</a></li>
+            <li><a href="#psf-storefront">Storefront rendering</a></li>
+            <li><a href="#psf-config">Configuration reference</a></li>
+            <li><a href="#psf-cli">Console commands</a></li>
+            <li><a href="#psf-schema">Database schema</a></li>
+            <li><a href="#psf-troubleshooting">Troubleshooting &amp; FAQ</a></li>
+        </ol>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="psf-what">1. What it does</h2>
+    <p>
+        The module ships three pieces that work together:
+    </p>
+    <table class="psf-table">
+        <thead>
+            <tr><th style="width:22%">Piece</th><th style="width:28%">Purpose</th><th>Where it lives</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Indexer</strong></td>
+                <td>Builds a flat table of <em>(product, website, group)</em> rows flagged on-sale / regular.</td>
+                <td><code>panth_salefilter_product_index</code> (MView-driven, refreshed on rule / product / special-price change)</td>
+            </tr>
+            <tr>
+                <td><strong>Layered-nav filter</strong></td>
+                <td>Adds the "On Sale" option to the sidebar on category + search pages.</td>
+                <td><code>\Panth\SaleFilter\Model\Layer\Filter\SaleFilter</code> (registered via <code>FilterListPlugin</code>)</td>
+            </tr>
+            <tr>
+                <td><strong>Apply plugin</strong></td>
+                <td>When <code>?sale_filter=1</code> or <code>?sale_filter=0</code> is in the URL, restricts the product collection so the grid + pager + toolbar count are all consistent.</td>
+                <td><code>\Panth\SaleFilter\Plugin\Catalog\Model\Layer\ApplySaleFilterPlugin</code></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="psf-callout psf-callout-info">
+        <strong>Why an index?</strong> Computing "is this product on sale right now for this group?" on every page render would re-evaluate the catalog-rule + special-price pipeline for every product in the collection &mdash; too slow for category pages with hundreds of items. The index pre-computes the answer, so the storefront reads a single boolean column.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="psf-sources">2. Data sources &mdash; what counts as "on sale"</h2>
+
+    <p>The indexer considers a product on-sale when any of the following apply:</p>
+
+    <table class="psf-table">
+        <thead>
+            <tr>
+                <th style="width:22%">Source</th>
+                <th style="width:12%">Supported</th>
+                <th style="width:26%">Scope</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Catalog Price Rules</strong></td>
+                <td><span class="psf-tag psf-tag-yes">Yes</span></td>
+                <td>per customer group, per website, date-windowed</td>
+                <td>Reads <code>catalogrule_product_price</code>. Respects rule priority, <em>Stop Rules Processing</em>, <em>from/to</em> dates, and <em>Customer Groups</em> selection.</td>
+            </tr>
+            <tr>
+                <td><strong>Special Price</strong></td>
+                <td><span class="psf-tag psf-tag-yes">Yes</span></td>
+                <td>website-scoped (applies to all groups on that website)</td>
+                <td>Requires <code>special_price &gt; 0</code> AND <code>special_price &lt; price</code>. Respects <em>Special Price From/To Date</em> windows.</td>
+            </tr>
+            <tr>
+                <td><strong>Configurable rollup</strong></td>
+                <td><span class="psf-tag psf-tag-yes">Yes</span></td>
+                <td>parent inherits if any child is on-sale</td>
+                <td>If a single child variant (<code>MH01-XS-Black</code>) has a rule or special price, the parent configurable (<code>MH01</code>) is flagged on-sale so it appears in the filtered category listing.</td>
+            </tr>
+            <tr>
+                <td><strong>Tier Price / Group Price</strong></td>
+                <td><span class="psf-tag psf-tag-no">Not tracked</span></td>
+                <td>&mdash;</td>
+                <td>The "Customer Group Price" table in <em>Advanced Pricing</em> is <strong>not</strong> currently considered. A product whose only discount is a per-group tier price will show under "No" even for the discounted group. Catalog rules are the recommended way to create per-group sales.</td>
+            </tr>
+            <tr>
+                <td><strong>Disabled products</strong></td>
+                <td><span class="psf-tag psf-tag-info">Excluded</span></td>
+                <td>&mdash;</td>
+                <td>Products with <em>Status = Disabled</em> or <em>Visibility = Not Visible Individually</em> are skipped by the storefront layer regardless of index state.</td>
+            </tr>
+            <tr>
+                <td><strong>Out-of-stock products</strong></td>
+                <td><span class="psf-tag psf-tag-info">Honors store config</span></td>
+                <td>&mdash;</td>
+                <td>Respects <em>Stores &gt; Configuration &gt; Catalog &gt; Inventory &gt; Display Out of Stock Products</em>. Out-of-stock items are hidden from the filter when that setting is <em>No</em>.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="psf-callout">
+        <strong>Example scenario.</strong> A catalog rule <em>"Members Only 10% Off"</em> for groups [General, Wholesale, Retailer] on SKU <code>MH01-XS-Black</code> is saved. After reindex the index gets one row per logged-in group with <code>is_on_sale=1</code> for product 47. Guests see no change (group 0 is excluded from the rule). On the category page, logged-in customers see "Yes (1)" in the sidebar; guests see only "No (48)".
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="psf-groups">3. Per-customer-group behavior</h2>
+
+    <p>
+        Every index row is keyed on <code>(entity_id, customer_group_id, website_id)</code>.
+        A single product can be "Yes" for Wholesale but "No" for Guest if the underlying
+        rule is scoped that way. The storefront reads the current shopper's group from the
+        HTTP Context (populated by Magento's <code>ContextPlugin</code>), which means:
+    </p>
+
+    <table class="psf-table">
+        <thead>
+            <tr>
+                <th>Shopper state</th>
+                <th>Group ID read from</th>
+                <th>Filter result for a rule scoped to "Wholesale only"</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Not logged in</td>
+                <td><code>0</code> (NOT LOGGED IN)</td>
+                <td><em>No</em> &mdash; the rule doesn't apply to group 0.</td>
+            </tr>
+            <tr>
+                <td>Logged in, General (group 1)</td>
+                <td><code>1</code></td>
+                <td><em>No</em></td>
+            </tr>
+            <tr>
+                <td>Logged in, Wholesale (group 2)</td>
+                <td><code>2</code></td>
+                <td><strong>Yes</strong></td>
+            </tr>
+            <tr>
+                <td>Logged in, Retailer (group 3)</td>
+                <td><code>3</code></td>
+                <td><em>No</em></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="psf-callout psf-callout-info">
+        <strong>Why HTTP Context and not Customer Session?</strong> Magento's <code>DepersonalizePlugin</code> resets the customer session to guest before cacheable pages render, so reading <code>customerSession-&gt;getCustomerGroupId()</code> during category rendering always returns <code>0</code>. The HTTP Context is populated earlier in the dispatch chain and survives depersonalization, so v1.0.9+ uses it as the authoritative source for the filter's group id.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="psf-cache">4. Cache behavior</h2>
+
+    <h3>Full Page Cache keying (built-in FPC)</h3>
+    <p>
+        Magento 2.4.7 introduced <code>IdentifierForSave</code> which computes the
+        FPC cache key purely from <code>$context-&gt;getVaryString()</code>. That value
+        is empty at LOAD time (before the controller's <code>beforeExecute</code>
+        plugins run), so out of the box every customer group lands on the same
+        cache entry &mdash; whichever user warms it wins. This module restores the
+        pre-2.4.7 cookie-aware keying via an around-plugin on the FPC Identifier,
+        so each group gets its own FPC entry.
+    </p>
+
+    <table class="psf-table">
+        <thead>
+            <tr>
+                <th>Event</th>
+                <th>Guest entry</th>
+                <th>Wholesale entry</th>
+                <th>Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Guest visits /gear/bags.html (first)</td>
+                <td>MISS → stored</td>
+                <td>&mdash;</td>
+                <td>No cookie yet, default key.</td>
+            </tr>
+            <tr>
+                <td>Guest revisits</td>
+                <td>HIT</td>
+                <td>&mdash;</td>
+                <td>Served from FPC.</td>
+            </tr>
+            <tr>
+                <td>Customer logs in → visits /gear/bags.html</td>
+                <td>HIT (unchanged)</td>
+                <td>MISS → stored</td>
+                <td>Their X-Magento-Vary cookie makes the FPC key differ.</td>
+            </tr>
+            <tr>
+                <td>Customer revisits</td>
+                <td>HIT</td>
+                <td>HIT</td>
+                <td>Both entries warm and independent.</td>
+            </tr>
+            <tr>
+                <td>Admin saves a catalog rule</td>
+                <td>MISS</td>
+                <td>MISS</td>
+                <td><code>TagInvalidator</code> cleans <code>cat_p</code> + <code>panth_salefilter</code> across every cache frontend, evicting both.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Block-level cache</h3>
+    <p>
+        The <code>FilterRenderer</code> block implements <code>IdentityInterface</code> and
+        emits <code>cat_p</code> + <code>panth_salefilter</code> tags, so any product save,
+        catalog rule save/delete, or an explicit call to
+        <code>CacheTypeList::cleanType('full_page')</code> evicts its cached HTML.
+        Its <code>getCacheKeyInfo()</code> includes the customer group id (from HTTP
+        Context), store id, website id, category id, currency, and the active
+        <code>sale_filter</code> request parameter &mdash; so per-group per-category
+        variants are cached separately.
+    </p>
+
+    <!-- ============================================================ -->
+    <h2 id="psf-indexer">5. Indexer modes &amp; reindex triggers</h2>
+
+    <table class="psf-table">
+        <thead>
+            <tr>
+                <th>Mode</th>
+                <th>When used</th>
+                <th>What fires reindex</th>
+                <th>Trade-off</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Update on Save</strong></td>
+                <td>Small-to-mid catalog, real-time storefront accuracy.</td>
+                <td>Catalog rule save / delete, product save / delete, manual reindex.</td>
+                <td>Synchronous &mdash; rule save blocks until reindex completes. Accurate immediately.</td>
+            </tr>
+            <tr>
+                <td><strong>Update by Schedule</strong></td>
+                <td>Large catalogs, batched cron-driven updates.</td>
+                <td>MView queue; <code>indexer_update_all_views</code> cron job processes deltas.</td>
+                <td>Non-blocking &mdash; rule save returns immediately. Storefront may lag by one cron tick (default: every minute).</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>
+        Switch mode in <a href="<?= $escaper->escapeUrl($block->getIndexerUrl()) ?>">System &gt; Index Management</a>
+        or via CLI:
+    </p>
+
+<pre><code>bin/magento indexer:set-mode realtime panth_salefilter_product
+bin/magento indexer:set-mode schedule panth_salefilter_product</code></pre>
+
+    <h3>Upstream events the module subscribes to</h3>
+    <ul>
+        <li><code>catalogrule_rule_save_commit_after</code> &mdash; fires on catalog rule save. Uses <em>commit_after</em> (not <em>save_after</em>) because Magento rebuilds <code>catalogrule_product_price</code> in a commit callback; listening earlier would race stale data.</li>
+        <li><code>catalogrule_rule_delete_commit_after</code> &mdash; same reason.</li>
+        <li><code>catalog_product_save_after</code> &mdash; reindexes just the one product row (realtime mode) or lets MView handle it (schedule mode).</li>
+        <li><code>catalog_product_delete_after</code> &mdash; removes the product's rows from the index.</li>
+    </ul>
+
+    <div class="psf-callout psf-callout-danger">
+        <strong>Heads up &mdash; mview races.</strong> If your <code>catalogrule_rule</code> indexer is on <em>Update by Schedule</em> but <code>panth_salefilter_product</code> is on <em>Update on Save</em>, the module forces a synchronous rebuild of <code>catalogrule_rule</code> before reindexing itself, so the sale filter sees fresh rule-price data. You don't need to match their modes.
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="psf-storefront">6. Storefront rendering</h2>
+
+    <p>The filter shows up in two forms depending on the active theme:</p>
+
+    <div class="psf-grid2">
+        <div class="psf-card">
+            <h3>Luma / default theme</h3>
+            <p>
+                Rendered by Magento's stock layered-nav block with the theme's
+                filter template. Appears as a collapsible "Sale Status" section
+                in the sidebar with "Yes" / "No" options and counts.
+            </p>
+            <p>
+                URL pattern: <code>/gear/bags.html?sale_filter=1</code> to filter
+                to on-sale products only.
+            </p>
+        </div>
+        <div class="psf-card">
+            <h3>Hyv&auml; theme</h3>
+            <p>
+                Uses the <code>Panth_SaleFilterHyva</code> companion module's
+                Alpine.js + Tailwind template at
+                <code>view/frontend/templates/layer/filter/sale.phtml</code>.
+                Supports the "Expanded by default" admin toggle.
+            </p>
+            <p>
+                Same URL parameter; same backend index.
+            </p>
+        </div>
+    </div>
+
+    <h3>Example storefront URLs</h3>
+
+<pre><code># Category + filter chained
+https://example.com/gear/bags.html
+https://example.com/gear/bags.html?sale_filter=1
+https://example.com/gear/bags.html?sale_filter=0
+
+# Works on search too
+https://example.com/catalogsearch/result/?q=hoodie&amp;sale_filter=1
+
+# Combined with other filters
+https://example.com/women/tops-women.html?sale_filter=1&amp;color=28&amp;price=50-100</code></pre>
+
+    <!-- ============================================================ -->
+    <h2 id="psf-config">7. Configuration reference</h2>
+
+    <p>
+        All settings live under <a href="<?= $escaper->escapeUrl($block->getConfigUrl()) ?>">Stores &gt;
+        Configuration &gt; Panth Infotech &gt; Sale Filter</a>. Every option is scope-aware
+        (default / website / store view).
+    </p>
+
+    <table class="psf-table">
+        <thead>
+            <tr>
+                <th style="width:28%">Path</th>
+                <th style="width:20%">Default</th>
+                <th>Purpose</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>panth_salefilter/general/is_enabled</code></td>
+                <td>Yes</td>
+                <td>Master kill-switch. Disabling hides the filter from layered nav without touching the index.</td>
+            </tr>
+            <tr>
+                <td><code>panth_salefilter/general/filter_label</code></td>
+                <td>Sale Status</td>
+                <td>Sidebar heading. Translated via standard i18n.</td>
+            </tr>
+            <tr>
+                <td><code>panth_salefilter/general/on_sale_option_label</code></td>
+                <td>Yes</td>
+                <td>Label for the on-sale option.</td>
+            </tr>
+            <tr>
+                <td><code>panth_salefilter/general/show_not_on_sale_option</code></td>
+                <td>Yes</td>
+                <td>When on, also exposes a "Not on Sale" option for shoppers who want to toggle to regular-price items.</td>
+            </tr>
+            <tr>
+                <td><code>panth_salefilter/general/not_on_sale_option_label</code></td>
+                <td>No</td>
+                <td>Label for the not-on-sale option.</td>
+            </tr>
+            <tr>
+                <td><code>panth_salefilter/general/show_count</code></td>
+                <td>Yes</td>
+                <td>When on, shows the product count next to each option.</td>
+            </tr>
+            <tr>
+                <td><code>panth_salefilter/appearance/default_expanded</code></td>
+                <td>Yes</td>
+                <td><em>Hyvä only.</em> Controls the filter's initial collapsed/expanded state on first paint.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="psf-cli">8. Console commands</h2>
+
+    <table class="psf-table">
+        <thead>
+            <tr><th style="width:42%">Command</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>bin/magento panth:salefilter:reindex</code></td>
+                <td>Full rebuild of <code>panth_salefilter_product_index</code> across all websites + groups.</td>
+            </tr>
+            <tr>
+                <td><code>bin/magento panth:salefilter:status</code></td>
+                <td>Dumps index row counts per (website, group) &mdash; handy sanity check after a rule import or migration.</td>
+            </tr>
+            <tr>
+                <td><code>bin/magento indexer:reindex panth_salefilter_product</code></td>
+                <td>Standard indexer command &mdash; equivalent to the reindex above but uses Magento's stock indexer framework.</td>
+            </tr>
+            <tr>
+                <td><code>bin/magento indexer:set-mode realtime panth_salefilter_product</code></td>
+                <td>Switch to <em>Update on Save</em>. See section 5.</td>
+            </tr>
+            <tr>
+                <td><code>bin/magento indexer:set-mode schedule panth_salefilter_product</code></td>
+                <td>Switch to <em>Update by Schedule</em>. See section 5.</td>
+            </tr>
+            <tr>
+                <td><code>bin/magento cache:clean full_page block_html</code></td>
+                <td>Only needed after <em>template</em> or <em>layout XML</em> changes &mdash; rule / product / special-price changes evict the right entries automatically.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="psf-schema">9. Database schema</h2>
+
+    <p>Two tables ship with the module &mdash; one index, one grid-flat collection target.</p>
+
+    <h3><code>panth_salefilter_product_index</code></h3>
+
+    <table class="psf-table">
+        <thead>
+            <tr><th style="width:22%">Column</th><th style="width:18%">Type</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>entity_id</code></td><td><code>int unsigned</code></td><td>Foreign key to <code>catalog_product_entity.entity_id</code>. Part of the PK.</td></tr>
+            <tr><td><code>customer_group_id</code></td><td><code>smallint unsigned</code></td><td>0 = Not Logged In, 1 = General, 2 = Wholesale, 3 = Retailer, or any custom group id. Part of the PK.</td></tr>
+            <tr><td><code>website_id</code></td><td><code>smallint unsigned</code></td><td>Website the flag applies to. Part of the PK.</td></tr>
+            <tr><td><code>is_on_sale</code></td><td><code>tinyint(1)</code></td><td><code>1</code> = on-sale for this (product, group, website). Row is omitted when the answer is <code>0</code>, so the table is sparse.</td></tr>
+        </tbody>
+    </table>
+
+    <p>Primary key: <code>(entity_id, customer_group_id, website_id)</code>. Indexed on <code>(is_on_sale, website_id, customer_group_id)</code> for the sidebar count query.</p>
+
+    <h3>Example rows</h3>
+
+<pre><code>+------------+-------------------+------------+-------------+
+| entity_id  | customer_group_id | website_id | is_on_sale  |
++------------+-------------------+------------+-------------+
+|         14 |                 0 |          1 |           1 |  -- Push It Messenger Bag, Guest, Base, on-sale
+|         14 |                 1 |          1 |           1 |  -- ...also on-sale for General
+|         14 |                 2 |          1 |           1 |
+|         14 |                 3 |          1 |           1 |
+|         47 |                 1 |          1 |           1 |  -- MH01-XS-Black, General only (Members rule)
+|         47 |                 2 |          1 |           1 |  -- ...Wholesale only
+|         47 |                 3 |          1 |           1 |  -- ...Retailer only
+|       2040 |                 0 |          1 |           1 |  -- Parent configurable via child special_price
++------------+-------------------+------------+-------------+</code></pre>
+
+    <!-- ============================================================ -->
+    <h2 id="psf-troubleshooting">10. Troubleshooting &amp; FAQ</h2>
+
+    <h3>The filter option doesn't appear on the storefront</h3>
+    <ul>
+        <li>Verify the module is enabled: <code>bin/magento module:status Panth_SaleFilter</code></li>
+        <li>Open the <a href="<?= $escaper->escapeUrl($block->getGridUrl()) ?>">Sale Filter Index grid</a> and confirm non-zero rows for the website + group you're testing.</li>
+        <li>Flush the <em>Layouts</em> and <em>Page Cache</em> types after first install: <code>bin/magento cache:clean layout full_page</code></li>
+        <li>Confirm the filter is enabled in <a href="<?= $escaper->escapeUrl($block->getConfigUrl()) ?>">Configuration</a>.</li>
+    </ul>
+
+    <h3>"Yes" count is 0 but I have active catalog rules</h3>
+    <ul>
+        <li>Check that the rule's <em>Customer Groups</em> and <em>Websites</em> include the scope you're browsing under.</li>
+        <li>Check the rule's <em>From Date / To Date</em> window covers <em>today</em>.</li>
+        <li>Trigger the built-in catalog-rule indexer: <code>bin/magento indexer:reindex catalogrule_rule</code></li>
+        <li>Then our indexer: <code>bin/magento indexer:reindex panth_salefilter_product</code></li>
+        <li>Inspect the index grid for the product ids the rule should have discounted. If they're missing, the catalog rule didn't apply (usually a conditions / group / website scope mismatch).</li>
+    </ul>
+
+    <h3>Logged-in customer sees the guest's filter counts</h3>
+    <p>
+        Fixed in <strong>v1.0.10</strong>. The FPC Identifier plugin now mixes the
+        X-Magento-Vary cookie into the cache key so each group gets its own cache
+        entry. If you're still seeing the old behavior, upgrade the module and
+        run <code>bin/magento cache:flush</code> once to reset pre-upgrade entries.
+    </p>
+
+    <h3>Count displayed in sidebar doesn't match the product grid</h3>
+    <p>
+        The sidebar counts a fresh, non-paginated product collection scoped to the
+        current category &mdash; so it represents the total on-sale items in the
+        category. The toolbar count reflects the current page's filtered result,
+        which differs when <code>?sale_filter=1</code> is active. Both numbers are
+        correct; they answer different questions.
+    </p>
+
+    <h3>Do I need to switch to Varnish for per-group caching?</h3>
+    <p>
+        No. The built-in FPC works correctly with the v1.0.10 identifier plugin.
+        Varnish is still recommended for throughput on large-catalog stores, but
+        the correctness part of per-group caching is handled at the Magento
+        application layer.
+    </p>
+
+    <!-- ============================================================ -->
+    <div class="psf-footer">
+        <h2>Built by Kishan Savaliya &mdash; Panth Infotech</h2>
+        <p>
+            Need a Magento extension, performance audit, or a custom storefront
+            feature built the same way? Reach out directly &mdash; happy to help.
+        </p>
+        <div class="psf-links">
+            <div>
+                <strong>Name:</strong>
+                Kishan Savaliya
+            </div>
+            <div>
+                <strong>Email:</strong>
+                <a href="mailto:kishansavaliyakb@gmail.com">kishansavaliyakb@gmail.com</a>
+            </div>
+            <div>
+                <strong>Agency:</strong>
+                Panth Infotech
+            </div>
+            <div>
+                <strong>Website:</strong>
+                <a href="https://kishansavaliya.com" target="_blank" rel="noopener noreferrer">kishansavaliya.com</a>
+            </div>
+            <div>
+                <strong>Upwork:</strong>
+                <a href="https://www.upwork.com/freelancers/~016dd1767321100e21" target="_blank" rel="noopener noreferrer">Hire me on Upwork</a>
+            </div>
+            <div>
+                <strong>GitHub:</strong>
+                <a href="https://github.com/mage2sk" target="_blank" rel="noopener noreferrer">github.com/mage2sk</a>
+            </div>
+        </div>
+    </div>
+
+</div>

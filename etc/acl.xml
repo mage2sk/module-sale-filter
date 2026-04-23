@@ -32,6 +32,10 @@
                                   title="Configuration"
                                   translate="title"
                                   sortOrder="10"/>
+                        <resource id="Panth_SaleFilter::help"
+                                  title="How It Works"
+                                  translate="title"
+                                  sortOrder="15"/>
                     </resource>
                 </resource>
             </resource>
