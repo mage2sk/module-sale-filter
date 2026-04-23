@@ -99,4 +99,25 @@
         </arguments>
     </type>
 
+    <!-- Restore cookie-aware FPC cache keying for built-in FPC on 2.4.7+.
+         Magento's IdentifierForSave drops the X-Magento-Vary cookie from
+         the cache key, which means guest and logged-in customers share one
+         FPC entry per URL — whoever warmed it wins. Our sale filter has
+         per-group counts, so a guest-warmed category page hides the "Yes"
+         option for logged-in General/Wholesale/Retailer shoppers.
+
+         The plugin is applied to both concrete Identifier classes because
+         Kernel injects them separately (one for load, one for save) and
+         the di preference points to IdentifierForSave for both. -->
+    <type name="Magento\Framework\App\PageCache\Identifier">
+        <plugin name="panth_salefilter_fpc_group_vary"
+                type="Panth\SaleFilter\Plugin\Framework\App\PageCache\IdentifierGroupAwarePlugin"
+                sortOrder="10"/>
+    </type>
+    <type name="Magento\PageCache\Model\App\Request\Http\IdentifierForSave">
+        <plugin name="panth_salefilter_fpc_group_vary_save"
+                type="Panth\SaleFilter\Plugin\Framework\App\PageCache\IdentifierGroupAwarePlugin"
+                sortOrder="10"/>
+    </type>
+
 </config>
