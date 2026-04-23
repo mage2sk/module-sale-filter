@@ -2,7 +2,7 @@
     "name": "mage2kishan/module-sale-filter",
     "description": "Panth Sale Filter — \"On Sale\" layered navigation filter for Magento 2, backed by a custom indexer that respects catalog rules, special prices, customer groups, websites, and all product types (simple, configurable, grouped, bundle, virtual, downloadable). Hyva and Luma compatible.",
     "type": "magento2-module",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "license": "proprietary",
     "keywords": [
         "magento2",
