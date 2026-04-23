@@ -6,7 +6,6 @@ namespace Panth\SaleFilter\Block\LayeredNavigation;
 use Magento\Catalog\Model\Layer\Filter\FilterInterface;
 use Magento\Catalog\Model\Layer\Resolver as LayerResolver;
 use Magento\Catalog\Model\Product as CatalogProduct;
-use Magento\CatalogRule\Model\Rule as CatalogRule;
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\DataObject\IdentityInterface;
@@ -110,9 +109,18 @@ class FilterRenderer extends Template implements IdentityInterface
      */
     public function getIdentities(): array
     {
+        // `cat_p` — tags every FPC entry that contains product data, so the
+        // sidebar block is evicted whenever a relevant product changes.
+        // `panth_salefilter` — our own tag, cleaned by the indexer and by
+        // the upstream-event observer after any catalog rule apply or
+        // product save that could shift the on-sale flag.
+        //
+        // We intentionally do NOT emit the generic `price` tag
+        // (`CatalogRule::getIdentities()` returns `['price']`). Cleaning it
+        // on every rule change would over-evict the FPC because `price` is
+        // stamped on many unrelated entries.
         return [
             CatalogProduct::CACHE_TAG,
-            CatalogRule::CACHE_TAG,
             Config::CACHE_TAG,
         ];
     }

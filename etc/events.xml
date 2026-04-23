@@ -2,19 +2,37 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
 
-    <!-- Re-apply our on-sale indexer after catalog price rules are (re)applied. -->
-    <event name="catalogrule_after_apply">
+    <!--
+        Catalog rule model events. `catalogrule_after_apply` is NOT fired
+        anywhere in Magento 2.4 — only `etc/events.xml` files reference it as
+        a listener — so we subscribe to the standard `_eventPrefix` events
+        from `Magento\CatalogRule\Model\Rule` instead (prefix is
+        `catalogrule_rule`). These fire on every admin rule save, delete, or
+        commit.
+    -->
+    <!--
+        Subscribe to `_save_commit_after` (not `_save_after`) for rules because
+        catalog-rule save flow registers a *commit callback* that rebuilds
+        `catalogrule_product_price` AFTER the save transaction commits. Our
+        indexer reads from that table, so if we ran on `_save_after` we'd race
+        the rebuild and reindex against stale rule-price data.
+    -->
+    <event name="catalogrule_rule_save_commit_after">
         <observer name="panth_salefilter_catalogrule_save"
                   instance="Panth\SaleFilter\Observer\CatalogRuleSaveAfter"/>
     </event>
+    <event name="catalogrule_rule_delete_commit_after">
+        <observer name="panth_salefilter_catalogrule_delete"
+                  instance="Panth\SaleFilter\Observer\CatalogRuleSaveAfter"/>
+    </event>
 
-    <!-- Per-product change: let the observer schedule a targeted reindex. -->
+    <!-- Per-product change: our observer either reindexes the row in
+         realtime mode or leaves the MView framework to catch up in
+         schedule mode. Cache tags are invalidated either way. -->
     <event name="catalog_product_save_after">
         <observer name="panth_salefilter_product_save"
                   instance="Panth\SaleFilter\Observer\CatalogRuleSaveAfter"/>
     </event>
-
-    <!-- Product delete: ensure the removed product is dropped from the index. -->
     <event name="catalog_product_delete_after">
         <observer name="panth_salefilter_product_delete"
                   instance="Panth\SaleFilter\Observer\CatalogRuleSaveAfter"/>

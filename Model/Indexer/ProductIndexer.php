@@ -3,11 +3,9 @@ declare(strict_types=1);
 
 namespace Panth\SaleFilter\Model\Indexer;
 
+use Panth\SaleFilter\Model\Cache\TagInvalidator;
 use Panth\SaleFilter\Model\Config;
 use Panth\SaleFilter\Model\ResourceModel\Indexer\ProductIndexer as ProductIndexerResource;
-use Magento\Catalog\Model\Product as CatalogProduct;
-use Magento\CatalogRule\Model\Rule as CatalogRule;
-use Magento\Framework\App\CacheInterface;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Indexer\ActionInterface as IndexerActionInterface;
 use Magento\Framework\Mview\ActionInterface as MviewActionInterface;
@@ -28,26 +26,10 @@ use Traversable;
  */
 class ProductIndexer implements IndexerActionInterface, MviewActionInterface
 {
-    /**
-     * Tag-based FPC invalidation after every (re)index run.
-     *
-     * These match the identities our FilterRenderer block exposes, so cleaning
-     * them evicts *only* the FPC entries that contain our block — category/
-     * search pages that render the layered navigation. The rest of the FPC
-     * stays warm.
-     *
-     * @var string[]
-     */
-    private const CACHE_TAGS_TO_CLEAN = [
-        CatalogProduct::CACHE_TAG,
-        CatalogRule::CACHE_TAG,
-        Config::CACHE_TAG,
-    ];
-
     public function __construct(
         private readonly ProductIndexerResource $resource,
         private readonly Config $config,
-        private readonly CacheInterface $appCache,
+        private readonly TagInvalidator $cacheInvalidator,
         private readonly LoggerInterface $logger
     ) {
     }
@@ -190,30 +172,18 @@ class ProductIndexer implements IndexerActionInterface, MviewActionInterface
     /**
      * Clean FPC / block-html entries tagged by our filter block.
      *
-     * Collected in one helper so every entry point (executeFull, executeRow,
-     * executeList, execute) produces the same side-effect.
-     *
-     * We deliberately use tag-based invalidation via `CacheInterface::clean()`
-     * rather than `cacheTypeList->invalidate(['full_page'])`:
-     *   - `invalidate` only marks a cache type as "needs refresh" (shows the
-     *     red admin banner) — it does NOT evict any entries, so stale HTML
-     *     keeps being served.
-     *   - `clean(['full_page'])` on a cache *type* would nuke the entire FPC
-     *     on every save — bad for hit rate.
-     *   - `clean([tag1, tag2])` on `CacheInterface` invalidates only the FPC
-     *     entries tagged with those tags. Our FilterRenderer block emits
-     *     exactly these tags via `getIdentities()`, so the cleanup is
-     *     surgical: only category / search / page-builder pages that render
-     *     the sale filter are evicted.
+     * Delegates to {@see TagInvalidator} which walks every cache frontend —
+     * default AND page_cache — so FPC entries hosted on a separate Redis
+     * database from the default cache are also evicted. Surgical, not a
+     * full FPC wipe.
      *
      * @return void
      */
     private function invalidateCaches(): void
     {
         try {
-            $this->appCache->clean(self::CACHE_TAGS_TO_CLEAN);
+            $this->cacheInvalidator->invalidate();
         } catch (Throwable $e) {
-            // Cache clean failures must never break a reindex - log and move on.
             $this->logger->warning(
                 '[panth_salefilter] Cache invalidation after reindex failed: ' . $e->getMessage(),
                 ['exception' => $e]
