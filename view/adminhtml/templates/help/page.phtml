@@ -42,12 +42,39 @@
     .psf-doc .psf-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 14px 18px; }
     .psf-doc .psf-card h3 { margin-top: 0; color: #1979c3; }
     .psf-doc .psf-card p:last-child { margin-bottom: 0; }
-    .psf-doc .psf-footer { margin-top: 46px; padding: 28px 32px; background: linear-gradient(135deg, #1979c3 0%, #136aad 100%); color: #fff; border-radius: 8px; }
-    .psf-doc .psf-footer h2 { border: none; color: #fff; margin-top: 0; }
-    .psf-doc .psf-footer a { color: #fff; text-decoration: underline; font-weight: 600; }
-    .psf-doc .psf-footer .psf-links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; margin-top: 14px; }
-    .psf-doc .psf-footer .psf-links div { padding: 6px 0; }
-    .psf-doc .psf-footer .psf-links strong { display: inline-block; min-width: 100px; color: #e3f2fd; }
+    /* Author card */
+    .psf-doc .psf-author { margin-top: 52px; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(25, 121, 195, 0.18), 0 2px 6px rgba(0,0,0,0.06); background: #fff; border: 1px solid #e5e5e5; }
+    .psf-doc .psf-author-hero { background: linear-gradient(135deg, #1979c3 0%, #0d4f80 100%); color: #fff; padding: 36px 40px 30px; display: flex; align-items: center; gap: 24px; position: relative; overflow: hidden; }
+    .psf-doc .psf-author-hero::before { content: ''; position: absolute; top: -60px; right: -60px; width: 220px; height: 220px; background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%); border-radius: 50%; }
+    .psf-doc .psf-author-hero::after { content: ''; position: absolute; bottom: -80px; left: 10%; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%); border-radius: 50%; }
+    .psf-doc .psf-avatar { width: 84px; height: 84px; border-radius: 50%; background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%); color: #1979c3; font-size: 32px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; position: relative; z-index: 1; border: 3px solid rgba(255,255,255,0.4); }
+    .psf-doc .psf-hero-text { position: relative; z-index: 1; }
+    .psf-doc .psf-hero-text .psf-name { font-size: 24px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.3px; }
+    .psf-doc .psf-hero-text .psf-role { font-size: 14px; font-weight: 500; opacity: 0.92; margin: 0 0 10px; letter-spacing: 0.3px; text-transform: uppercase; }
+    .psf-doc .psf-hero-text .psf-tagline { font-size: 14.5px; line-height: 1.5; opacity: 0.96; margin: 0; max-width: 620px; }
+    .psf-doc .psf-author-services { padding: 20px 40px; background: #fafcfe; border-bottom: 1px solid #e5eef5; }
+    .psf-doc .psf-author-services h4 { margin: 0 0 10px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; }
+    .psf-doc .psf-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .psf-doc .psf-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #fff; border: 1px solid #d1e1ed; border-radius: 16px; font-size: 12.5px; color: #1979c3; font-weight: 500; transition: all 0.15s ease; }
+    .psf-doc .psf-chip:hover { background: #1979c3; color: #fff; border-color: #1979c3; }
+    .psf-doc .psf-contact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; padding: 0; }
+    .psf-doc .psf-contact-card { padding: 22px 24px; border-right: 1px solid #e5eef5; border-bottom: 1px solid #e5eef5; display: flex; align-items: flex-start; gap: 14px; text-decoration: none; color: #303030; transition: all 0.18s ease; background: #fff; position: relative; }
+    .psf-doc .psf-contact-card:nth-child(3n) { border-right: none; }
+    .psf-doc .psf-contact-card:nth-last-child(-n+3) { border-bottom: none; }
+    .psf-doc .psf-contact-card:hover { background: #f0f7fc; transform: translateY(-1px); box-shadow: inset 0 2px 0 #1979c3; }
+    .psf-doc .psf-contact-card:hover .psf-contact-icon { background: #1979c3; color: #fff; transform: scale(1.05); }
+    .psf-doc .psf-contact-icon { flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; background: #e3f2fd; color: #1979c3; display: flex; align-items: center; justify-content: center; transition: all 0.18s ease; }
+    .psf-doc .psf-contact-icon svg { width: 20px; height: 20px; }
+    .psf-doc .psf-contact-label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.6px; margin: 0 0 3px; }
+    .psf-doc .psf-contact-value { font-size: 14px; font-weight: 600; color: #303030; margin: 0; word-break: break-word; line-height: 1.35; }
+    .psf-doc .psf-contact-sub { font-size: 12px; color: #6b7280; margin: 2px 0 0; font-weight: 400; }
+    .psf-doc .psf-author-cta { padding: 22px 40px; background: linear-gradient(90deg, #fafcfe 0%, #f0f7fc 100%); border-top: 1px solid #e5eef5; text-align: center; font-size: 13.5px; color: #5a6570; }
+    .psf-doc .psf-author-cta strong { color: #1979c3; }
+    @media (max-width: 860px) {
+        .psf-doc .psf-author-hero { flex-direction: column; text-align: center; padding: 30px 24px; }
+        .psf-doc .psf-contact-grid { grid-template-columns: 1fr; }
+        .psf-doc .psf-contact-card { border-right: none !important; border-bottom: 1px solid #e5eef5 !important; }
+    }
 </style>
 
 <div class="psf-doc">
@@ -556,39 +583,132 @@ https://example.com/women/tops-women.html?sale_filter=1&amp;color=28&amp;price=5
         application layer.
     </p>
 
-    <!-- ============================================================ -->
-    <div class="psf-footer">
-        <h2>Built by Kishan Savaliya &mdash; Panth Infotech</h2>
-        <p>
-            Need a Magento extension, performance audit, or a custom storefront
-            feature built the same way? Reach out directly &mdash; happy to help.
-        </p>
-        <div class="psf-links">
-            <div>
-                <strong>Name:</strong>
-                Kishan Savaliya
-            </div>
-            <div>
-                <strong>Email:</strong>
-                <a href="mailto:kishansavaliyakb@gmail.com">kishansavaliyakb@gmail.com</a>
-            </div>
-            <div>
-                <strong>Agency:</strong>
-                Panth Infotech
-            </div>
-            <div>
-                <strong>Website:</strong>
-                <a href="https://kishansavaliya.com" target="_blank" rel="noopener noreferrer">kishansavaliya.com</a>
-            </div>
-            <div>
-                <strong>Upwork:</strong>
-                <a href="https://www.upwork.com/freelancers/~016dd1767321100e21" target="_blank" rel="noopener noreferrer">Hire me on Upwork</a>
-            </div>
-            <div>
-                <strong>GitHub:</strong>
-                <a href="https://github.com/mage2sk" target="_blank" rel="noopener noreferrer">github.com/mage2sk</a>
+    <!-- ============================================================
+         Author card
+         ============================================================ -->
+    <div class="psf-author">
+
+        <div class="psf-author-hero">
+            <div class="psf-avatar">KS</div>
+            <div class="psf-hero-text">
+                <div class="psf-role">Magento Extension Developer</div>
+                <h2 class="psf-name">Kishan Savaliya</h2>
+                <p class="psf-tagline">
+                    Senior Magento 2 engineer at <strong>Panth Infotech</strong>. Ten years shipping
+                    production storefronts &mdash; Hyvä themes, custom extensions,
+                    performance audits, and B2B pricing flows. This module is one
+                    of 30+ published on Packagist; say hi if you need the same
+                    care on yours.
+                </p>
             </div>
         </div>
+
+        <div class="psf-author-services">
+            <h4>What I build</h4>
+            <div class="psf-chips">
+                <span class="psf-chip">Custom Magento 2 Modules</span>
+                <span class="psf-chip">Hyvä Storefronts</span>
+                <span class="psf-chip">Performance Audits</span>
+                <span class="psf-chip">B2B &amp; Multi-Site</span>
+                <span class="psf-chip">Catalog &amp; Pricing</span>
+                <span class="psf-chip">SEO &amp; Schema</span>
+                <span class="psf-chip">Indexer / Cache Debugging</span>
+            </div>
+        </div>
+
+        <div class="psf-contact-grid">
+
+            <a class="psf-contact-card" href="mailto:kishansavaliyakb@gmail.com">
+                <span class="psf-contact-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                        <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                </span>
+                <div>
+                    <div class="psf-contact-label">Email</div>
+                    <p class="psf-contact-value">kishansavaliyakb@gmail.com</p>
+                    <p class="psf-contact-sub">Usually replies within a day</p>
+                </div>
+            </a>
+
+            <a class="psf-contact-card" href="https://kishansavaliya.com" target="_blank" rel="noopener noreferrer">
+                <span class="psf-contact-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="2" y1="12" x2="22" y2="12"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                </span>
+                <div>
+                    <div class="psf-contact-label">Portfolio</div>
+                    <p class="psf-contact-value">kishansavaliya.com</p>
+                    <p class="psf-contact-sub">Case studies &amp; blog</p>
+                </div>
+            </a>
+
+            <a class="psf-contact-card" href="https://www.upwork.com/freelancers/~016dd1767321100e21" target="_blank" rel="noopener noreferrer">
+                <span class="psf-contact-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.561 13.158c-1.102 0-2.135-.467-3.074-1.227l.228-1.076.008-.042c.207-1.143.849-3.06 2.839-3.06 1.492 0 2.703 1.212 2.703 2.703-.003 1.49-1.212 2.702-2.704 2.702zm0-8.14c-2.539 0-4.51 1.649-5.31 4.366-1.22-1.834-2.148-4.036-2.687-5.892H7.828v7.112a2.551 2.551 0 0 1-2.547 2.548 2.55 2.55 0 0 1-2.545-2.548V3.492H0v7.112a5.422 5.422 0 0 0 5.281 5.411 5.422 5.422 0 0 0 5.282-5.411v-1.19c.53 1.013 1.18 2.035 1.974 2.940l-1.673 7.884h2.804l1.213-5.715c1.063.679 2.283 1.109 3.681 1.109 3 0 5.439-2.452 5.439-5.45C24 7.406 21.561 5.019 18.561 5.019z"/>
+                    </svg>
+                </span>
+                <div>
+                    <div class="psf-contact-label">Upwork</div>
+                    <p class="psf-contact-value">Hire me on Upwork</p>
+                    <p class="psf-contact-sub">Top Rated Plus &middot; 100% Success</p>
+                </div>
+            </a>
+
+            <a class="psf-contact-card" href="https://github.com/mage2sk" target="_blank" rel="noopener noreferrer">
+                <span class="psf-contact-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                </span>
+                <div>
+                    <div class="psf-contact-label">GitHub</div>
+                    <p class="psf-contact-value">github.com/mage2sk</p>
+                    <p class="psf-contact-sub">Source &amp; issue tracker</p>
+                </div>
+            </a>
+
+            <a class="psf-contact-card" href="https://packagist.org/packages/mage2kishan/" target="_blank" rel="noopener noreferrer">
+                <span class="psf-contact-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                        <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+                        <line x1="12" y1="22.08" x2="12" y2="12"/>
+                    </svg>
+                </span>
+                <div>
+                    <div class="psf-contact-label">Packagist</div>
+                    <p class="psf-contact-value">mage2kishan/*</p>
+                    <p class="psf-contact-sub">30+ published modules</p>
+                </div>
+            </a>
+
+            <div class="psf-contact-card" style="cursor: default;">
+                <span class="psf-contact-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                    </svg>
+                </span>
+                <div>
+                    <div class="psf-contact-label">Agency</div>
+                    <p class="psf-contact-value">Panth Infotech</p>
+                    <p class="psf-contact-sub">Magento-first dev studio</p>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="psf-author-cta">
+            Have feedback or want a feature added? <strong>Open an issue on GitHub</strong>
+            or <strong>drop an email</strong> &mdash; both land in the same inbox.
+        </div>
+
     </div>
 
 </div>
