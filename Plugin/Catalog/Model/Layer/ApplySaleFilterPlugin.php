@@ -5,8 +5,10 @@ namespace Panth\SaleFilter\Plugin\Catalog\Model\Layer;
 
 use Panth\SaleFilter\Model\Config;
 use Magento\Catalog\Model\Layer;
+use Magento\Catalog\Model\Product\Attribute\Source\Status as ProductStatus;
 use Magento\Catalog\Model\Product\Visibility as ProductVisibility;
 use Magento\Catalog\Model\ResourceModel\Product\Collection as ProductCollection;
+use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductCollectionFactory;
 use Magento\Customer\Model\Session as CustomerSession;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\ResourceConnection;
@@ -73,6 +75,7 @@ class ApplySaleFilterPlugin
         private readonly StoreManagerInterface $storeManager,
         private readonly CustomerSession $customerSession,
         private readonly ProductVisibility $productVisibility,
+        private readonly ProductCollectionFactory $productCollectionFactory,
         private readonly LoggerInterface $logger
     ) {
     }
@@ -149,59 +152,74 @@ class ApplySaleFilterPlugin
      */
     private function resolveFilteredIds(Layer $subject, int $value): array
     {
-        $category   = $subject->getCurrentCategory();
-        $categoryId = ($category && (int) $category->getId() > 0 && (int) $category->getLevel() >= 2)
-            ? (int) $category->getId()
-            : null;
+        $category = $subject->getCurrentCategory();
+        $hasCategoryScope = $category
+            && (int) $category->getId() > 0
+            && (int) $category->getLevel() >= 2;
 
-        $connection      = $this->resourceConnection->getConnection();
-        $indexTable      = $this->resourceConnection->getTableName('panth_salefilter_product_index');
-        $customerGroupId = (int) $this->customerSession->getCustomerGroupId();
-        $websiteId       = (int) $this->storeManager->getStore()->getWebsiteId();
-        $storeId         = (int) $this->storeManager->getStore()->getId();
-
-        if ($categoryId === null) {
-            if ($value === Config::VALUE_ON_SALE) {
-                return $this->fetchOnSaleIds();
-            }
-            return [];
+        // Non-category layers (search, widget) fall back to the raw on-sale
+        // id list. Computing "all visible products minus on-sale" storewide
+        // is expensive and rarely useful outside a category context.
+        if (!$hasCategoryScope) {
+            return $value === Config::VALUE_ON_SALE ? $this->fetchOnSaleIds() : [];
         }
 
-        $catTable = $this->resourceConnection->getTableName(
-            sprintf('catalog_category_product_index_store%d', $storeId)
+        $onSaleIds = $this->fetchOnSaleIds();
+        // `addFieldToFilter('entity_id', ['in' => []])` is invalid SQL — fall
+        // back to a sentinel id that can never match a real product.
+        $membership = $onSaleIds ?: [0];
+
+        $collection = $this->productCollectionFactory->create();
+        $collection->addAttributeToFilter('status', ProductStatus::STATUS_ENABLED);
+        $collection->setVisibility($this->productVisibility->getVisibleInCatalogIds());
+        $collection->addCategoryFilter($category);
+        $collection->addFieldToFilter(
+            'entity_id',
+            [$value === Config::VALUE_ON_SALE ? 'in' : 'nin' => $membership]
         );
 
-        $visibility = $this->productVisibility->getVisibleInCatalogIds();
+        $this->applySort($collection);
 
-        $joinCondition = sprintf(
-            'idx.entity_id = cci.product_id'
-            . ' AND idx.customer_group_id = %d'
-            . ' AND idx.website_id = %d'
-            . ' AND idx.is_on_sale = 1',
-            $customerGroupId,
-            $websiteId
-        );
+        // Iterate once rather than `getAllIds()` — the latter resets ORDER
+        // in `_getAllIdsSelect`, losing the sort we just applied. The product
+        // collection lazy-loads entity rows only (no heavy attribute EAV hits)
+        // so this is fast for normal category sizes.
+        $ids = [];
+        foreach ($collection as $product) {
+            $ids[] = (int) $product->getId();
+        }
+        return $ids;
+    }
 
-        if ($value === Config::VALUE_ON_SALE) {
-            $select = $connection->select()
-                ->from(['cci' => $catTable], ['product_id'])
-                ->join(['idx' => $indexTable], $joinCondition, [])
-                ->where('cci.category_id = ?', $categoryId)
-                ->where('cci.visibility IN (?)', $visibility)
-                ->order('cci.position ASC')
-                ->distinct(true);
-        } else {
-            $select = $connection->select()
-                ->from(['cci' => $catTable], ['product_id'])
-                ->joinLeft(['idx' => $indexTable], $joinCondition, [])
-                ->where('cci.category_id = ?', $categoryId)
-                ->where('cci.visibility IN (?)', $visibility)
-                ->where('idx.entity_id IS NULL')
-                ->order('cci.position ASC')
-                ->distinct(true);
+    /**
+     * Translate the storefront toolbar's sort params (`product_list_order` /
+     * `product_list_dir`) onto the product collection. Silently ignores
+     * unrecognised sort codes — they'll fall through to the collection's
+     * default order (usually category position).
+     */
+    private function applySort(ProductCollection $collection): void
+    {
+        $sortAttr = (string) $this->request->getParam('product_list_order', '');
+        $sortDir  = strtoupper((string) $this->request->getParam('product_list_dir', 'asc'));
+        if ($sortDir !== 'ASC' && $sortDir !== 'DESC') {
+            $sortDir = 'ASC';
         }
 
-        return array_map('intval', $connection->fetchCol($select));
+        // Default (no explicit sort param) = category position. Matches
+        // Magento's default Category\Layer sort behaviour.
+        if ($sortAttr === '' || $sortAttr === 'position') {
+            $collection->addAttributeToSort('position', $sortDir);
+            return;
+        }
+
+        // Whitelist the common storefront sort codes; price/name are EAV
+        // attributes, so `addAttributeToSort` handles the joins correctly.
+        if (in_array($sortAttr, ['price', 'name'], true)) {
+            $collection->addAttributeToSort($sortAttr, $sortDir);
+            return;
+        }
+
+        // Unknown sort code: leave the collection's default order in place.
     }
 
     /**
