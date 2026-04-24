@@ -9,7 +9,9 @@ use Magento\Catalog\Model\Product\Attribute\Source\Status as ProductStatus;
 use Magento\Catalog\Model\Product\Visibility as ProductVisibility;
 use Magento\Catalog\Model\ResourceModel\Product\Collection as ProductCollection;
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory as ProductCollectionFactory;
+use Magento\CatalogInventory\Helper\Stock as StockHelper;
 use Magento\Customer\Model\Context as CustomerContext;
+use Magento\Eav\Model\Config as EavConfig;
 use Magento\Framework\App\Http\Context as HttpContext;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\App\ResourceConnection;
@@ -79,7 +81,9 @@ class ApplySaleFilterPlugin
         private readonly HttpContext $httpContext,
         private readonly ProductVisibility $productVisibility,
         private readonly ProductCollectionFactory $productCollectionFactory,
-        private readonly LoggerInterface $logger
+        private readonly LoggerInterface $logger,
+        private readonly StockHelper $stockHelper,
+        private readonly EavConfig $eavConfig
     ) {
     }
 
@@ -116,16 +120,11 @@ class ApplySaleFilterPlugin
         }
 
         try {
+            // resolveFilteredIds now applies the stock filter AND mirrors
+            // every other active layered-nav filter, so COUNT_FLAG ends up
+            // matching the grid's actual row count — no separate post-
+            // intersection pass needed.
             $allowedIds = $this->resolveFilteredIds($subject, $value);
-
-            // Intersect with the layer's ALREADY-filtered id set so stock
-            // filtering (`show_out_of_stock = 0`) and other active layered-
-            // nav filters are honoured in both the grid and the toolbar's
-            // `X Items` count. Without this step the raw on-sale id list
-            // inflates COUNT_FLAG above the pager's real row count — the
-            // shopper sees "69 Items" in the header while paging through
-            // only 48 rows because the 21 OOS ones get stripped later.
-            $allowedIds = $this->intersectWithLayerIds($collection, $allowedIds);
 
             $collection->setFlag(self::ITEMS_FLAG, $allowedIds);
             $collection->setFlag(self::COUNT_FLAG, count($allowedIds));
@@ -142,52 +141,6 @@ class ApplySaleFilterPlugin
         }
 
         return $collection;
-    }
-
-    /**
-     * Intersect a list of on-sale ids with the ids the layer's collection
-     * would actually render — i.e. after stock filtering and every other
-     * active layered-nav filter.
-     *
-     * We read the layer's already-filtered id set via {@see ProductCollection::getAllIds()}
-     * BEFORE we mutate the SELECT with our own `WHERE entity_id IN (...)`
-     * below. That call strips LIMIT/OFFSET/ORDER internally, so it returns
-     * every row the grid would paginate through — not the toolbar's current
-     * page slice. On a clean ES-backed Fulltext collection it still works
-     * because the ES-derived `e.entity_id IN (search-hits)` filter is part
-     * of the base SELECT.
-     *
-     * @param ProductCollection $collection
-     * @param array<int, int> $allowedIds
-     * @return array<int, int>
-     */
-    private function intersectWithLayerIds(ProductCollection $collection, array $allowedIds): array
-    {
-        if ($allowedIds === []) {
-            return [];
-        }
-
-        try {
-            $layerIds = $collection->getAllIds();
-        } catch (\Throwable) {
-            // If we can't read the layer's visible ids (collection not yet
-            // loadable, custom driver, etc.), fall back to the raw on-sale
-            // list — better to slightly overcount than to drop the filter.
-            return $allowedIds;
-        }
-
-        if ($layerIds === []) {
-            return [];
-        }
-
-        $layerSet = array_flip(array_map('intval', $layerIds));
-        $out = [];
-        foreach ($allowedIds as $id) {
-            if (isset($layerSet[(int) $id])) {
-                $out[] = (int) $id;
-            }
-        }
-        return $out;
     }
 
     /**
@@ -231,6 +184,21 @@ class ApplySaleFilterPlugin
         $collection->addAttributeToFilter('status', ProductStatus::STATUS_ENABLED);
         $collection->setVisibility($this->productVisibility->getVisibleInCatalogIds());
         $collection->addCategoryFilter($category);
+
+        // Respect the merchant's out-of-stock display setting. When
+        // `cataloginventory/options/show_out_of_stock = 0` the helper joins
+        // `cataloginventory_stock_status` and filters to `stock_status = 1`,
+        // matching what Magento core does to the grid's own collection via
+        // `CatalogInventory\Model\Plugin\LayerPreparation`. When the merchant
+        // shows OOS, this is a no-op and the count includes OOS rows just
+        // like the grid does.
+        $this->stockHelper->addIsInStockFilterToCollection($collection);
+
+        // Mirror every other active layered-nav filter (brand, price, custom
+        // attribute, drill-down categories) so the toolbar's "X Items" total
+        // matches the grid once the shopper has stacked filters.
+        $this->mirrorActiveLayerFilters($subject, $collection);
+
         $collection->addFieldToFilter(
             'entity_id',
             [$value === Config::VALUE_ON_SALE ? 'in' : 'nin' => $membership]
@@ -247,6 +215,220 @@ class ApplySaleFilterPlugin
             $ids[] = (int) $product->getId();
         }
         return $ids;
+    }
+
+    /**
+     * Re-apply every currently-active sibling layer filter onto the fresh
+     * count collection.
+     *
+     * Why we read the REQUEST, not {@see Layer::getState()}:
+     *   `afterGetProductCollection` runs when the GRID first reads the
+     *   collection — which on Magento 2.4 happens BEFORE the layered-
+     *   navigation block renders and therefore BEFORE every sibling
+     *   filter's `apply()` populates layer state. At plugin time the
+     *   state has at most our own SaleFilter; asking the state for
+     *   "other active filters" always returns empty, so a state-based
+     *   mirror would silently skip the filter the shopper just clicked.
+     *
+     *   The storefront request carries every active filter as a URL
+     *   parameter (`?color=49&pattern=196&price=30-50&cat=27`). We
+     *   iterate those params, skip our own and the reserved toolbar
+     *   keys (p, limit, mode, order, dir), resolve each to an attribute
+     *   via the eav config, and translate it the same way each filter's
+     *   own `apply()` would have done.
+     *
+     *   In the filter class (SaleFilter::mirrorActiveLayerFilters) we
+     *   can read state because the sidebar renders AFTER every other
+     *   filter has applied. Both paths converge on the same EAV-index +
+     *   super-link approach for attribute values.
+     */
+    private function mirrorActiveLayerFilters(Layer $subject, ProductCollection $collection): void
+    {
+        $reserved = [
+            Config::FILTER_REQUEST_VAR, // our sale_filter
+            'p', 'page', 'limit', 'product_list_limit',
+            'mode', 'product_list_mode',
+            'order', 'product_list_order',
+            'dir', 'product_list_dir',
+            'q', 'id',
+        ];
+
+        $params = [];
+        try {
+            $params = (array) $this->request->getParams();
+        } catch (\Throwable) {
+            return;
+        }
+
+        foreach ($params as $key => $value) {
+            if (!is_string($key) || $key === '' || in_array($key, $reserved, true)) {
+                continue;
+            }
+            if ($value === '' || $value === null) {
+                continue;
+            }
+
+            try {
+                if ($key === 'price') {
+                    $parts = explode('-', (string) $value);
+                    if (count($parts) !== 2) {
+                        continue;
+                    }
+                    [$min, $max] = $parts;
+                    if ($min !== '' && is_numeric($min)) {
+                        $collection->addFieldToFilter('price', ['gteq' => (float) $min]);
+                    }
+                    if ($max !== '' && is_numeric($max)) {
+                        $collection->addFieldToFilter('price', ['lt' => (float) $max]);
+                    }
+                    continue;
+                }
+
+                if ($key === 'cat') {
+                    $catId = (int) $value;
+                    if ($catId > 0) {
+                        $collection->addCategoriesFilter(['in' => [$catId]]);
+                    }
+                    continue;
+                }
+
+                $attribute = $this->resolveFilterableAttribute($key);
+                if ($attribute === null) {
+                    continue;
+                }
+                $this->applyAttributeFilterViaEavIndex(
+                    $collection,
+                    (int) $attribute->getId(),
+                    $value
+                );
+            } catch (\Throwable $e) {
+                $this->logger->warning(
+                    sprintf(
+                        'Panth SaleFilter: could not mirror request param "%s" (%s)',
+                        $key,
+                        $e->getMessage()
+                    )
+                );
+            }
+        }
+    }
+
+    /**
+     * Resolve a storefront filter-param key to a product attribute model
+     * if it maps to a layered-nav-filterable EAV attribute. Returns null
+     * for unknown keys so unrelated params (UTM, tracking, etc.) are
+     * ignored without triggering an error.
+     */
+    private function resolveFilterableAttribute(string $code): ?\Magento\Catalog\Model\ResourceModel\Eav\Attribute
+    {
+        try {
+            $attribute = $this->eavConfig->getAttribute(
+                \Magento\Catalog\Model\Product::ENTITY,
+                $code
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (!$attribute || !$attribute->getId()) {
+            return null;
+        }
+        // Only layered-nav-filterable attributes participate — a
+        // non-filterable attribute like `url_key` arriving as a param
+        // (search form edge case) would otherwise try to apply.
+        if ((int) $attribute->getIsFilterable() === 0
+            && (int) $attribute->getIsFilterableInSearch() === 0
+        ) {
+            return null;
+        }
+
+        return $attribute;
+    }
+
+    /**
+     * Apply a layered-nav attribute filter (brand, color, size, …) to the
+     * fresh count collection using `catalog_product_index_eav` so super-
+     * attribute values on configurable products are matched on the parent
+     * rows too. Duplicates {@see \Panth\SaleFilter\Model\Layer\Filter\SaleFilter::applyAttributeFilterViaEavIndex}
+     * — see that method's docblock for the full rationale. Kept separate
+     * here because sharing would require a trait or helper for an
+     * infrequently-touched 20-line block.
+     */
+    private function applyAttributeFilterViaEavIndex(
+        ProductCollection $collection,
+        int $attributeId,
+        mixed $value
+    ): void {
+        $values = is_array($value) ? $value : [$value];
+        $values = array_values(array_filter(array_map(
+            static fn ($v) => is_scalar($v) ? (int) $v : 0,
+            $values
+        ), static fn (int $v): bool => $v > 0));
+
+        if ($values === []) {
+            return;
+        }
+
+        $connection = $this->resourceConnection->getConnection();
+        $eavTable = $this->resourceConnection->getTableName('catalog_product_index_eav');
+        $superLinkTable = $this->resourceConnection->getTableName('catalog_product_super_link');
+
+        $select = $connection->select()
+            ->from(['idx' => $eavTable], ['entity_id'])
+            ->where('idx.attribute_id = ?', $attributeId)
+            ->where('idx.value IN (?)', $values)
+            ->distinct(true);
+        $matchingIds = array_map('intval', $connection->fetchCol($select));
+
+        if ($matchingIds !== []) {
+            // Widen to configurable parents via super-link so super-
+            // attribute hits on children (color on configurable_simple)
+            // also count the parent rows the grid actually renders.
+            $parentSelect = $connection->select()
+                ->from(['sl' => $superLinkTable], ['parent_id'])
+                ->where('sl.product_id IN (?)', $matchingIds)
+                ->distinct(true);
+            $parents = array_map('intval', $connection->fetchCol($parentSelect));
+            if ($parents !== []) {
+                $matchingIds = array_unique(array_merge($matchingIds, $parents));
+            }
+        }
+
+        // When the EAV index holds no rows for this attribute/value on
+        // either children or parents (sample data sometimes misses super-
+        // attribute index entries), OR when intersecting with the
+        // collection's current row set would zero it out, skip the
+        // constraint rather than force an empty set. A slightly-wider
+        // count is better than a silently broken filter.
+        if ($matchingIds === []
+            || !$this->intersectionHasRows($collection, $matchingIds)
+        ) {
+            return;
+        }
+
+        $collection->addFieldToFilter('entity_id', ['in' => $matchingIds]);
+    }
+
+    /**
+     * Clone the count collection, apply the candidate id filter, read
+     * `getSize()`. Used to ensure we don't zero out the collection by
+     * mirroring a super-attribute filter whose EAV index rows live on
+     * children outside the current category scope.
+     *
+     * @param int[] $ids
+     */
+    private function intersectionHasRows(ProductCollection $collection, array $ids): bool
+    {
+        if ($ids === []) {
+            return false;
+        }
+        try {
+            $probe = clone $collection;
+            $probe->addFieldToFilter('entity_id', ['in' => $ids]);
+            return ((int) $probe->getSize()) > 0;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
