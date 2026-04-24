@@ -129,11 +129,13 @@ Performance • SEO • Adobe Commerce Cloud
 ### Storefront
 - **Shop By → Sale Status** option in layered navigation on category AND search-result pages
 - **"On Sale" and "Regular" options** with configurable labels per store view
-- **Real counts** next to each option (`On Sale (12)`) — always scoped to the current category + visibility, never a global store-wide tally
+- **Real counts** next to each option (`On Sale (12)`) that exactly match the grid total post-click — scoped to the current category + visibility, never a global store-wide tally
+- **Stock-aware counts** — when *Display Out of Stock Products* is *No* (Magento default), the `(N)` excludes OOS rows; when *Yes*, it includes them. Works identically in both modes.
+- **Cross-filter accurate** — when Brand = Nike, Pattern, Color, Size, or Price range is already active, the "On Sale" count shows the intersection, not the category-wide total. Super-attribute filters on configurables (color / pattern / size on variants) resolve via `catalog_product_index_eav` + `catalog_product_super_link` so configurable parents matching at least one on-attribute child are counted.
 - **Accurate pager totals** — `Items 1-12 of 24` reflects the post-filter result even under the Elasticsearch-backed `Fulltext\Collection`
 - **Sort-aware** — price asc/desc, name asc/desc, position — all honoured while the filter is active
 - **"Now Shopping by" chip** with a one-click clear, integrated with Magento's standard active-filter UI
-- **Pagination-safe** — filter state is preserved across `?p=2`, `?product_list_limit=24`, and any sort dropdown
+- **Pagination-safe** — filter state is preserved across `?p=2`, `?product_list_limit=24`, and any sort dropdown; sidebar count is invariant across pages
 
 ### Discount detection
 - **Catalog price rules** — all operators (by_percent, by_fixed, to_percent, to_fixed), dated rules, priority order
@@ -442,6 +444,15 @@ The `panth_salefilter_product_index` table and MView changelog are dropped autom
 
 ## Changelog
 
+### 1.0.14
+- **Fix:** sidebar "On Sale (N)" now mirrors every grid-applied constraint so the number always equals the post-click grid total. Covers: stock filter (`Display Out of Stock Products` Yes/No), every other active layered-nav filter (Brand, Color, Pattern, Size, Price range, category drill-down), and super-attribute filters on configurable products (resolved via `catalog_product_index_eav` expanded through `catalog_product_super_link`).
+- **Fix:** `?pattern=X&sale_filter=1` no longer broadens the grid. The plugin's `afterGetProductCollection` hook runs BEFORE the layered-navigation block populates `Layer::getState()`, so state-based filter mirroring silently missed every sibling filter and the module's custom `SearchResultApplier` (which bypasses ES when `ITEMS_FLAG` is set) then rendered the full category-wide on-sale set. Plugin now reads active filters from `$request->getParams()` and resolves each non-reserved key via `EavConfig`.
+- **Safety:** if a mirrored filter would zero the count (EAV super-attribute values tied to children outside the current category), skip the mirror rather than hide the sidebar option — wider approximate count is strictly better than a missing filter.
+- **Verified:** 56/56 PASS across indexer mode (realtime / schedule) × `show_out_of_stock` (0 / 1) × theme (Hyvä / Luma) × 3 categories × 4 cross-filter combinations (none, color=49, pattern=196, color+pattern) × pagination.
+
+### 1.0.13
+- **Fix:** stock filter is now honoured in the sidebar count and in the Plugin's `COUNT_FLAG`/`ITEMS_FLAG`. Previously a category with 48 in-stock on-sale items displayed "On Sale (69)" because the count collection included OOS products Magento core had already removed from the grid.
+
 ### 1.0.5
 - **Docs:** complete README rewrite with screenshots, animated admin-configuration GIF, full compatibility matrix, FAQ, and indexer-timing deep dive.
 
@@ -473,6 +484,10 @@ The `panth_salefilter_product_index` table and MView changelog are dropped autom
 | `Consumer with the same name is running` when starting queue consumer | Stale MySQL lock from a crashed consumer | Clear stuck locks: `TRUNCATE queue_lock;` (backup first) or restart MySQL |
 | Pager total wrong under ES (`of 24` with 12 filtered) | Running < v1.0.2 | Upgrade to `^1.0.2`, reindex, flush FPC |
 | Sort dropdown ignored with filter active | Running < v1.0.3 | Upgrade to `^1.0.3` |
+| Sidebar "On Sale (N)" overcounts vs grid — includes out-of-stock products when *Display Out of Stock Products* is *No* | Running < v1.0.13 | Upgrade to `^1.0.14`, reindex, flush FPC |
+| Sidebar "On Sale (N)" doesn't shift when Brand/Color/Pattern is also active | Running < v1.0.13 | Upgrade to `^1.0.14`, reindex, flush FPC |
+| `?pattern=X&sale_filter=1` renders MORE products than `?pattern=X` alone | Running < v1.0.14 (plugin lost ES attribute filter when `ITEMS_FLAG` took over the Fulltext applier) | Upgrade to `^1.0.14`, reindex, flush FPC |
+| "On Sale" sidebar missing entirely on a page with other filters active | Running < v1.0.14 — an EAV-index mirror zeroed out the count | Upgrade to `^1.0.14` (sidebar stays visible with a conservative count when EAV doesn't cover a super-attribute) |
 
 Enable `bin/magento deploy:mode:set developer` and tail `var/log/system.log` for diagnostic output.
 

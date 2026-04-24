@@ -568,11 +568,53 @@ https://example.com/women/tops-women.html?sale_filter=1&amp;color=28&amp;price=5
 
     <h3>Count displayed in sidebar doesn't match the product grid</h3>
     <p>
-        The sidebar counts a fresh, non-paginated product collection scoped to the
-        current category &mdash; so it represents the total on-sale items in the
-        category. The toolbar count reflects the current page's filtered result,
-        which differs when <code>?sale_filter=1</code> is active. Both numbers are
-        correct; they answer different questions.
+        Fixed in <strong>v1.0.14</strong>. The sidebar &ldquo;On Sale (N)&rdquo;
+        count now mirrors every constraint the grid applies, so the number next
+        to &ldquo;Yes&rdquo; always equals the total the shopper would see after
+        clicking it:
+    </p>
+    <ul>
+        <li>
+            <strong>Stock filter (show_out_of_stock):</strong> when
+            <em>Stores &gt; Configuration &gt; Catalog &gt; Inventory &gt; Display Out of Stock Products</em>
+            is set to <em>No</em> (Magento default), the count excludes out-of-stock
+            products. When set to <em>Yes</em>, OOS rows are included. Works
+            identically in both modes.
+        </li>
+        <li>
+            <strong>Other active layered-nav filters:</strong> Brand, Pattern,
+            Color, Size, Price range, manual category drill-down &mdash; each
+            active sibling filter narrows the &ldquo;On Sale&rdquo; count to the
+            intersection. E.g. on
+            <code>?pattern=196</code> the sidebar shows &ldquo;On Sale (5)&rdquo;
+            when only 5 pattern-196 products are on sale.
+        </li>
+        <li>
+            <strong>Super-attributes on configurables:</strong> when a filter
+            attribute (e.g. <code>color</code>) lives on child SKUs, the count
+            resolves via <code>catalog_product_index_eav</code> expanded through
+            <code>catalog_product_super_link</code> so configurable parents
+            whose children match are counted &mdash; matching the grid's ES
+            behaviour.
+        </li>
+        <li>
+            <strong>Pagination:</strong> sidebar count is invariant across
+            <code>?p=1</code>, <code>?p=2</code>, &hellip; it reflects the full
+            filtered total, not the current page slice.
+        </li>
+        <li>
+            <strong>Cache &amp; indexer modes:</strong> same count on cold and
+            warm FPC, same count under both <em>Update on Save</em> (realtime)
+            and <em>Update on Schedule</em> indexer modes &mdash; the read path
+            queries <code>panth_salefilter_product_index</code>, so whatever
+            state the indexer is in determines the count consistently.
+        </li>
+    </ul>
+    <p>
+        If you still see a mismatch after upgrading to v1.0.14, run
+        <code>bin/magento cache:flush</code> once and
+        <code>bin/magento indexer:reindex panth_salefilter_product</code>
+        to refresh the index and clear any pre-upgrade FPC entries.
     </p>
 
     <h3>Do I need to switch to Varnish for per-group caching?</h3>
