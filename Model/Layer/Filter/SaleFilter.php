@@ -189,29 +189,71 @@ class SaleFilter extends AbstractFilter
     /**
      * Count products in the current layer's scope that ARE or are NOT on sale.
      *
-     * Builds a fresh, non-paginated product collection scoped to the current
-     * category / visibility / status — cloning the layer's product collection
-     * would inherit the toolbar's page-slice WHERE and cap counts at page
-     * size.
+     * Uses the layer's own product collection as the source of truth so the
+     * count reflects EVERY constraint the grid itself applies:
+     *
+     *   - category / visibility / status (applied by Magento core in
+     *     {@see \Magento\Catalog\Model\Layer\Category::prepareProductCollection})
+     *   - stock filter when `cataloginventory/options/show_out_of_stock = 0`
+     *     (applied by {@see \Magento\CatalogInventory\Model\Plugin\LayerPreparation})
+     *   - every OTHER active layered-nav filter (price range, brand,
+     *     custom attribute filters) — applied by each sibling filter's
+     *     {@see AbstractFilter::apply()} during page bootstrap
+     *
+     * Previously this method built a fresh, isolated product collection
+     * scoped only to category + visibility + status. Two bugs followed:
+     *
+     *   1. Out-of-stock on-sale products inflated the count when the
+     *      merchant had `show_out_of_stock = 0` — a category with 48
+     *      in-stock on-sale items displayed "On Sale (69)" in the sidebar.
+     *   2. Activating any other filter (brand = Nike, etc.) didn't shift
+     *      the on-sale count — the sidebar still showed the full-category
+     *      total instead of the intersection with the active filter.
+     *
+     * Intersecting the layer's already-filtered id set with our on-sale
+     * index fixes both at once and stays consistent regardless of how many
+     * filters the shopper stacks.
      *
      * @param bool $onSale
      * @return int
      */
     private function countForScope(bool $onSale): int
     {
-        $collection = $this->productCollectionFactory->create();
-        $collection->addAttributeToFilter('status', ProductStatus::STATUS_ENABLED);
-        $collection->setVisibility($this->productVisibility->getVisibleInCatalogIds());
-
-        $category = $this->getLayer()->getCurrentCategory();
-        if ($category && (int) $category->getId() > 0 && (int) $category->getLevel() >= 2) {
-            $collection->addCategoryFilter($category);
+        try {
+            $layerCollection = $this->getLayer()->getProductCollection();
+            // `getAllIds()` internally clones the SELECT and strips
+            // LIMIT/OFFSET/ORDER so it returns every id the grid would
+            // render — not just the toolbar's current page slice. Works
+            // uniformly on regular ProductCollection and the ES-backed
+            // Fulltext collection.
+            $visibleIds = array_map('intval', $layerCollection->getAllIds());
+        } catch (\Throwable $e) {
+            $this->logger->warning(
+                sprintf('Panth SaleFilter: unable to read layer ids for count (%s)', $e->getMessage()),
+                ['exception' => $e]
+            );
+            return 0;
         }
 
-        $onSaleIds = $this->fetchOnSaleIds() ?: [0];
-        $collection->addFieldToFilter('entity_id', [$onSale ? 'in' : 'nin' => $onSaleIds]);
+        if ($visibleIds === []) {
+            return 0;
+        }
 
-        return (int) $collection->getSize();
+        $onSaleIds = $this->fetchOnSaleIds();
+        if ($onSaleIds === []) {
+            // Nothing on sale anywhere — `On Sale` = 0, `Regular` = every
+            // visible product.
+            return $onSale ? 0 : count($visibleIds);
+        }
+
+        $onSaleSet = array_flip($onSaleIds);
+        $count = 0;
+        foreach ($visibleIds as $id) {
+            if (isset($onSaleSet[$id]) === $onSale) {
+                $count++;
+            }
+        }
+        return $count;
     }
 
     /**

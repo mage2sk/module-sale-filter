@@ -118,6 +118,15 @@ class ApplySaleFilterPlugin
         try {
             $allowedIds = $this->resolveFilteredIds($subject, $value);
 
+            // Intersect with the layer's ALREADY-filtered id set so stock
+            // filtering (`show_out_of_stock = 0`) and other active layered-
+            // nav filters are honoured in both the grid and the toolbar's
+            // `X Items` count. Without this step the raw on-sale id list
+            // inflates COUNT_FLAG above the pager's real row count — the
+            // shopper sees "69 Items" in the header while paging through
+            // only 48 rows because the 21 OOS ones get stripped later.
+            $allowedIds = $this->intersectWithLayerIds($collection, $allowedIds);
+
             $collection->setFlag(self::ITEMS_FLAG, $allowedIds);
             $collection->setFlag(self::COUNT_FLAG, count($allowedIds));
 
@@ -133,6 +142,52 @@ class ApplySaleFilterPlugin
         }
 
         return $collection;
+    }
+
+    /**
+     * Intersect a list of on-sale ids with the ids the layer's collection
+     * would actually render — i.e. after stock filtering and every other
+     * active layered-nav filter.
+     *
+     * We read the layer's already-filtered id set via {@see ProductCollection::getAllIds()}
+     * BEFORE we mutate the SELECT with our own `WHERE entity_id IN (...)`
+     * below. That call strips LIMIT/OFFSET/ORDER internally, so it returns
+     * every row the grid would paginate through — not the toolbar's current
+     * page slice. On a clean ES-backed Fulltext collection it still works
+     * because the ES-derived `e.entity_id IN (search-hits)` filter is part
+     * of the base SELECT.
+     *
+     * @param ProductCollection $collection
+     * @param array<int, int> $allowedIds
+     * @return array<int, int>
+     */
+    private function intersectWithLayerIds(ProductCollection $collection, array $allowedIds): array
+    {
+        if ($allowedIds === []) {
+            return [];
+        }
+
+        try {
+            $layerIds = $collection->getAllIds();
+        } catch (\Throwable) {
+            // If we can't read the layer's visible ids (collection not yet
+            // loadable, custom driver, etc.), fall back to the raw on-sale
+            // list — better to slightly overcount than to drop the filter.
+            return $allowedIds;
+        }
+
+        if ($layerIds === []) {
+            return [];
+        }
+
+        $layerSet = array_flip(array_map('intval', $layerIds));
+        $out = [];
+        foreach ($allowedIds as $id) {
+            if (isset($layerSet[(int) $id])) {
+                $out[] = (int) $id;
+            }
+        }
+        return $out;
     }
 
     /**
