@@ -86,6 +86,7 @@ Performance • SEO • Adobe Commerce Cloud
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [How It Works](#how-it-works)
+- [Caching — Per Customer Group, Per Category, Per Filter State](#caching--per-customer-group-per-category-per-filter-state)
 - [Admin Index Grid](#admin-index-grid)
 - [Indexing](#indexing)
 - [Dated Discounts — When Does the Index Refresh?](#dated-discounts--when-does-the-index-refresh)
@@ -273,6 +274,58 @@ All fields are **store-scoped** — you can set different labels per store view 
 2. **MView subscriptions** on the relevant upstream tables keep the index fresh without a cron run — product saves, rule re-applies, price changes all propagate through the changelog.
 3. **Layered-navigation plugin** runs `afterGetProductCollection` on `Catalog\Model\Layer\Category` and `Catalog\Model\Layer\Search`. It intersects the index with the current category + visibility, stashes the ordered id list on the collection, and swaps Magento's `SearchResultApplier` for a filter-aware variant so the ES page slice is **taken from the filtered list** rather than narrowed by it after the fact.
 4. **`getSize()` plugin** returns the pre-computed post-filter count so the toolbar pager shows `N of true-total`, not `N of unfiltered`.
+
+---
+
+## Caching — Per Customer Group, Per Category, Per Filter State
+
+The "On Sale" filter shows **different counts to different customer groups** (a Wholesale customer's discount is not a Retailer's discount). Cached naively, the first visitor's view would be served to everyone — wrong counts, missing options. This module solves it with two well-known Magento hooks plus a multi-frontend tag invalidator.
+
+![How the cache works](docs/images/how-cache-is-working.png)
+
+### The smart label — `Block/LayeredNavigation/FilterRenderer.php`
+
+`FilterRenderer` extends `Template` and implements `IdentityInterface`. Two methods do all the work:
+
+- **`getCacheKeyInfo()`** — returns an array Magento hashes into the block-cache key. We mix in **store id, website id, customer group, currency, current category id, and the active `sale_filter` URL param**. Each unique combination gets its own cached HTML fragment, so a Guest never sees a Wholesale-warmed render.
+- **`getIdentities()`** — returns the cache tags stamped on every cached entry: `cat_p` (catalog product) and `panth_salefilter` (our own). Whenever a product or catalog rule changes, we clean by these tags and only matching entries are evicted — surrounding pages stay warm.
+
+> **Critical:** customer group is read from `HttpContext`, **not** `CustomerSession`. Magento's `DepersonalizePlugin` wipes the session to guest before cacheable blocks render, so the session would always lie. `HttpContext` is the only safe source.
+
+### The trigger — `Observer/CatalogRuleSaveAfter.php`
+
+Wired in `etc/events.xml` to four events:
+
+- `catalogrule_rule_save_commit_after` / `catalogrule_rule_delete_commit_after`
+- `catalog_product_save_after` / `catalog_product_delete_after`
+
+We listen on `_save_commit_after` (not `_save_after`) for rules because Magento's catalog-rule save runs a **commit callback** that rebuilds `catalogrule_product_price` *after* the transaction. Listening earlier would race the rebuild and reindex against stale data.
+
+The observer reindexes (in realtime mode only — schedule mode lets cron catch up) and then calls the cache invalidator unconditionally.
+
+### The cleaner — `Model/Cache/TagInvalidator.php`
+
+Why a dedicated class instead of `CacheInterface::clean()`? Because some installs put the `default` and `page_cache` (FPC) frontends on **different Redis databases**. `CacheInterface::clean()` only touches the default frontend → FPC stays stale. Cleaning by cache *type* (`full_page`) is the opposite mistake — it nukes every FPC entry in the store and tanks hit rate.
+
+`TagInvalidator::invalidate()` iterates `Cache\Frontend\Pool` (which enumerates *every* configured frontend) and calls `clean(MATCHING_ANY_TAG, [cat_p, panth_salefilter])` on each. Surgical, safe across split Redis setups, and defensive — a single backend failure never stops the others.
+
+### The Magento 2.4.7 FPC fix — `Plugin/Framework/App/PageCache/IdentifierGroupAwarePlugin.php`
+
+Magento 2.4.7 moved FPC identifier logic to `IdentifierForSave`, which keys only on `$context->getVaryString()`. That string is empty at LOAD time because the customer ContextPlugin runs on `beforeExecute` (during dispatch) while FPC load happens earlier in `aroundDispatch`. Net effect: **whichever user warms the cache for a URL dictates what every other user sees** on the built-in FPC. A guest-warmed category page hides the "Yes" option for logged-in General / Wholesale / Retailer shoppers.
+
+This plugin's `aroundGetValue()` reads `X-Magento-Vary` straight off the incoming request cookie (the pre-2.4.7 behavior) and mixes it into the cache key, so each group ends up with its own FPC entry. The cookie is stable from request arrival to response dispatch, so LOAD and SAVE produce the same key within a single request.
+
+Wired in `etc/di.xml` against **both** `Identifier` and `IdentifierForSave` because Magento injects them separately for load vs save — patching only one gives mismatched keys and zero cache hits.
+
+### Reading order
+
+| File | What it does |
+|---|---|
+| [`Block/LayeredNavigation/FilterRenderer.php`](Block/LayeredNavigation/FilterRenderer.php) | Smart cache key (`getCacheKeyInfo`) + identity tags (`getIdentities`) |
+| [`etc/events.xml`](etc/events.xml) | Subscribe observer to product / rule save / delete events |
+| [`Observer/CatalogRuleSaveAfter.php`](Observer/CatalogRuleSaveAfter.php) | Reindex + call the invalidator |
+| [`Model/Cache/TagInvalidator.php`](Model/Cache/TagInvalidator.php) | Walk every cache frontend, clean by tag |
+| [`Plugin/Framework/App/PageCache/IdentifierGroupAwarePlugin.php`](Plugin/Framework/App/PageCache/IdentifierGroupAwarePlugin.php) | Restore cookie-aware FPC keying on Magento 2.4.7+ |
 
 ---
 
