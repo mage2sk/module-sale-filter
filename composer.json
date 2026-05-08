@@ -1,8 +1,8 @@
 {
     "name": "mage2kishan/module-sale-filter",
-    "description": "Panth Sale Filter — \"On Sale\" layered navigation filter for Magento 2, backed by a custom indexer that respects catalog rules, special prices, customer groups, websites, and all product types (simple, configurable, grouped, bundle, virtual, downloadable). Hyva and Luma compatible.",
+    "description": "Panth Sale Filter \u2014 \"On Sale\" layered navigation filter for Magento 2, backed by a custom indexer that respects catalog rules, special prices, customer groups, websites, and all product types (simple, configurable, grouped, bundle, virtual, downloadable). Hyva and Luma compatible.",
     "type": "magento2-module",
-    "version": "1.0.16",
+    "version": "1.0.17",
     "license": "proprietary",
     "keywords": [
         "magento2",
@@ -42,8 +42,8 @@
         "magento/module-ui": "^101.2"
     },
     "suggest": {
-        "mage2kishan/module-sale-filter-hyva": "For Hyvä-branded Alpine template and Appearance admin group.",
-        "hyva-themes/magento2-default-theme": "For Hyvä frontend compatibility (no jQuery, TailwindCSS, AlpineJS)."
+        "mage2kishan/module-sale-filter-hyva": "For Hyv\u00e4-branded Alpine template and Appearance admin group.",
+        "hyva-themes/magento2-default-theme": "For Hyv\u00e4 frontend compatibility (no jQuery, TailwindCSS, AlpineJS)."
     },
     "autoload": {
         "files": [
