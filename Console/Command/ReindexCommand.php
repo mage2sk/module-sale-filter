@@ -12,13 +12,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-/**
- * CLI: bin/magento panth:salefilter:reindex
- *
- * Triggers a full rebuild of the panth_salefilter_product indexer with
- * duration output. Pass --force to invalidate the view first so the rebuild
- * starts from scratch even if the indexer thinks it's already up to date.
- */
 class ReindexCommand extends Command
 {
     private const INDEXER_ID = 'panth_salefilter_product';
@@ -49,7 +42,6 @@ class ReindexCommand extends Command
         try {
             $this->appState->setAreaCode(Area::AREA_ADMINHTML);
         } catch (LocalizedException) {
-            // Area code already set — safe to continue.
         }
 
         try {

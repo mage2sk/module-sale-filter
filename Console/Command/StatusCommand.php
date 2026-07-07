@@ -15,13 +15,6 @@ use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-/**
- * CLI: bin/magento panth:salefilter:status
- *
- * Prints a table of on-sale product counts broken down by
- * (website, customer group) — useful for verifying the indexer ran and
- * seeing scope-level coverage at a glance.
- */
 class StatusCommand extends Command
 {
     public function __construct(
@@ -47,7 +40,6 @@ class StatusCommand extends Command
         try {
             $this->appState->setAreaCode(Area::AREA_ADMINHTML);
         } catch (LocalizedException) {
-            // already set — fine
         }
 
         try {
@@ -59,7 +51,6 @@ class StatusCommand extends Command
             $rows = [];
             foreach ($websites as $website) {
                 if ((int) $website->getId() === 0) {
-                    // Skip the admin website.
                     continue;
                 }
                 foreach ($groups as $group) {

@@ -6,12 +6,6 @@ namespace Panth\SaleFilter\Block\Adminhtml\Button;
 use Magento\Framework\UrlInterface;
 use Magento\Framework\View\Element\UiComponent\Control\ButtonProviderInterface;
 
-/**
- * "Refresh Index" button shown in the top-right corner of the grid.
- *
- * Submits to the Reindex controller via a standard form POST so Magento's
- * admin CSRF token is applied automatically.
- */
 class Reindex implements ButtonProviderInterface
 {
     public function __construct(
@@ -19,9 +13,6 @@ class Reindex implements ButtonProviderInterface
     ) {
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     public function getButtonData(): array
     {
         return [

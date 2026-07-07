@@ -13,17 +13,6 @@ use Psr\Log\LoggerInterface;
 use Throwable;
 use Traversable;
 
-/**
- * Panth Sale Filter product indexer action.
- *
- * Thin orchestrator that delegates the SQL-heavy work to {@see ProductIndexerResource}
- * and is responsible for:
- *  - Implementing both the full-reindex and Mview action contracts.
- *  - Reading the admin flags from {@see Config} so the ResourceModel only sees booleans.
- *  - Flushing caches once a scope has been rebuilt so storefront sees fresh data.
- *  - Error handling: per spec §Edge Cases #1, a product with no price is skipped,
- *    not fatal - log and keep going.
- */
 class ProductIndexer implements IndexerActionInterface, MviewActionInterface
 {
     public function __construct(
@@ -34,12 +23,6 @@ class ProductIndexer implements IndexerActionInterface, MviewActionInterface
     ) {
     }
 
-    /**
-     * Full reindex: rebuild the sale-filter index for every product in every scope.
-     *
-     * @return void
-     * @throws LocalizedException Re-thrown with context if the ResourceModel fails.
-     */
     public function executeFull(): void
     {
         $start = microtime(true);
@@ -69,13 +52,6 @@ class ProductIndexer implements IndexerActionInterface, MviewActionInterface
         }
     }
 
-    /**
-     * Reindex a subset of product ids (partial reindex / targeted list).
-     *
-     * @param array<int, int|string> $ids Product entity ids.
-     * @return void
-     * @throws LocalizedException Re-thrown with context if the ResourceModel fails.
-     */
     public function executeList(array $ids): void
     {
         $normalized = $this->normalizeIds($ids);
@@ -101,9 +77,6 @@ class ProductIndexer implements IndexerActionInterface, MviewActionInterface
                 microtime(true) - $start
             ));
         } catch (Throwable $e) {
-            // Spec §Edge Cases #1: skip products that can't be indexed, don't crash
-            // the whole batch. We still bubble a LocalizedException so the indexer
-            // state reflects the failure, but the inner logger records the details.
             $this->logger->error(
                 '[panth_salefilter] Partial reindex failed: ' . $e->getMessage(),
                 ['ids' => $normalized, 'exception' => $e]
@@ -115,13 +88,6 @@ class ProductIndexer implements IndexerActionInterface, MviewActionInterface
         }
     }
 
-    /**
-     * Reindex a single product id.
-     *
-     * @param int $id Product entity id.
-     * @return void
-     * @throws LocalizedException Re-thrown with context if the ResourceModel fails.
-     */
     public function executeRow($id): void
     {
         $productId = (int) $id;
@@ -149,13 +115,6 @@ class ProductIndexer implements IndexerActionInterface, MviewActionInterface
         }
     }
 
-    /**
-     * Mview hook: called by the materialized-view scheduler with the changed ids.
-     *
-     * @param int[]|Traversable<int> $ids
-     * @return void
-     * @throws LocalizedException
-     */
     public function execute($ids): void
     {
         if ($ids instanceof Traversable) {
@@ -169,16 +128,6 @@ class ProductIndexer implements IndexerActionInterface, MviewActionInterface
         $this->executeList($ids);
     }
 
-    /**
-     * Clean FPC / block-html entries tagged by our filter block.
-     *
-     * Delegates to {@see TagInvalidator} which walks every cache frontend —
-     * default AND page_cache — so FPC entries hosted on a separate Redis
-     * database from the default cache are also evicted. Surgical, not a
-     * full FPC wipe.
-     *
-     * @return void
-     */
     private function invalidateCaches(): void
     {
         try {
@@ -191,12 +140,6 @@ class ProductIndexer implements IndexerActionInterface, MviewActionInterface
         }
     }
 
-    /**
-     * Cast arbitrary id input to a clean list of positive ints.
-     *
-     * @param array<int, int|string> $ids
-     * @return array<int, int>
-     */
     private function normalizeIds(array $ids): array
     {
         $clean = [];

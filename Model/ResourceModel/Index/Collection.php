@@ -9,43 +9,13 @@ use Magento\Framework\Event\ManagerInterface as EventManagerInterface;
 use Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult;
 use Psr\Log\LoggerInterface;
 
-/**
- * Collection backing the admin UI-component listing.
- *
- * Extends Magento's UI-component {@see SearchResult} so it satisfies both
- * the CollectionFactory instanceof check AND the SearchResultInterface
- * contract the DataProvider expects.
- *
- * Joins the raw index table with catalog_product, store_website,
- * customer_group, the two price EAV decimals, catalogrule_product_price,
- * plus a correlated subquery over catalogrule / catalogrule_product so the
- * admin sees the full pricing picture alongside every on-sale row.
- *
- * The natural composite PK is flattened into a synthetic `grid_id` column
- * so the UI component has a single-column row identifier.
- *
- * Filter columns that map to SQL expressions / joined tables are rewritten
- * in {@see self::addFieldToFilter()} so the WHERE clauses resolve:
- *   - joined-table columns -> qualified alias in WHERE
- *   - ambiguous columns    -> main_table.<col> in WHERE
- *   - match_source         -> per-case WHERE on the underlying columns
- *   - applicable_rules     -> WHERE EXISTS over catalogrule_product + catalogrule
- *   - discount_percent     -> HAVING on the alias (simple numeric range)
- *   - grid_id              -> HAVING on the alias
- */
 class Collection extends SearchResult
 {
-    /** Columns that only exist as SELECT aliases — filter via HAVING. */
     private const HAVING_COLUMNS = [
         'grid_id',
         'discount_percent',
     ];
 
-    /**
-     * Remap virtual column names to their underlying qualified alias.
-     *
-     * @var array<string, string>
-     */
     private const FIELD_MAP = [
         'entity_id'           => 'main_table.entity_id',
         'customer_group_id'   => 'main_table.customer_group_id',
@@ -81,9 +51,6 @@ class Collection extends SearchResult
         $this->_idFieldName = 'grid_id';
     }
 
-    /**
-     * @return $this
-     */
     protected function _initSelect()
     {
         parent::_initSelect();
@@ -189,13 +156,6 @@ class Collection extends SearchResult
         return $this;
     }
 
-    /**
-     * Route filter fields to the correct SQL layer.
-     *
-     * @param string|array<int, string> $field
-     * @param mixed                     $condition
-     * @return $this
-     */
     public function addFieldToFilter($field, $condition = null)
     {
         if (is_string($field)) {
@@ -222,9 +182,6 @@ class Collection extends SearchResult
         return parent::addFieldToFilter($field, $condition);
     }
 
-    /**
-     * Translate a match_source value into a WHERE clause against the underlying joined columns.
-     */
     private function applyMatchSourceFilter(?string $value): void
     {
         if ($value === null || $value === '') {
@@ -252,9 +209,6 @@ class Collection extends SearchResult
         }
     }
 
-    /**
-     * Translate a selected applicable_rules value into a WHERE EXISTS subquery.
-     */
     private function applyApplicableRulesFilter(?string $value): void
     {
         if ($value === null || $value === '') {
@@ -279,11 +233,6 @@ class Collection extends SearchResult
         );
     }
 
-    /**
-     * UI dropdowns wrap the chosen value as ['eq' => 'X']. Unwrap to a scalar.
-     *
-     * @param mixed $condition
-     */
     private function extractSingleValue($condition): ?string
     {
         if (is_string($condition)) {

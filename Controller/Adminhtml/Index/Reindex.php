@@ -9,12 +9,6 @@ use Magento\Backend\Model\View\Result\Redirect;
 use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\Indexer\IndexerRegistry;
 
-/**
- * Admin button target: rebuild the sale-filter index on demand.
- *
- * GET /admin/panth_salefilter/index/reindex → redirects back to the grid.
- * Gated by ACL resource Panth_SaleFilter::index_reindex.
- */
 class Reindex extends Action implements HttpGetActionInterface
 {
     public const ADMIN_RESOURCE = 'Panth_SaleFilter::index_reindex';
@@ -30,7 +24,6 @@ class Reindex extends Action implements HttpGetActionInterface
 
     public function execute(): Redirect
     {
-        /** @var Redirect $redirect */
         $redirect = $this->resultFactory->create(\Magento\Framework\Controller\ResultFactory::TYPE_REDIRECT);
         $redirect->setPath('panth_salefilter/index/index');
 

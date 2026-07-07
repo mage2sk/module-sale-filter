@@ -5,11 +5,6 @@ namespace Panth\SaleFilter\Model\Source;
 
 use Magento\Framework\Data\OptionSourceInterface;
 
-/**
- * Dropdown options for the grid's Source column — mirrors the CASE
- * expression used by {@see \Panth\SaleFilter\Model\ResourceModel\Index\Collection}
- * to classify why a row is on-sale.
- */
 class MatchSource implements OptionSourceInterface
 {
     public const SOURCE_SPECIAL      = 'Special Price';
@@ -17,9 +12,6 @@ class MatchSource implements OptionSourceInterface
     public const SOURCE_BOTH         = 'Both';
     public const SOURCE_PARENT       = 'Parent Aggregation';
 
-    /**
-     * @return array<int, array{value: string, label: string}>
-     */
     public function toOptionArray(): array
     {
         return [

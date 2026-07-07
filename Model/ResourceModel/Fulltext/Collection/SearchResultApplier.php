@@ -9,33 +9,8 @@ use Magento\Framework\Api\Search\SearchResultInterface;
 use Magento\Framework\Data\Collection;
 use Magento\Framework\DB\Select;
 
-/**
- * Search-result applier that honours the `sale_filter` layer filter.
- *
- * Magento's default ES applier slices `searchResult->getItems()` down to the
- * current page *first*, then writes `WHERE e.entity_id IN (page-slice-ids)`
- * into the collection select. That's fine without our filter — but ES
- * returns only the page slice (12 items out of 24 in the category), so
- * intersecting those 12 with our on-sale set can yield just 4-8 products per
- * page even when the true filtered total would fill the page.
- *
- * When the collection is tagged with `ITEMS_FLAG` (the full, already-ordered
- * list of entity_ids that pass the sale filter), we skip the ES items list
- * and slice *our* list into the current page. The grid then genuinely shows
- * the first N filtered products on page 1, the next N on page 2, etc.
- *
- * With no tag on the collection (every other category / search request in
- * the store) we reproduce the default applier behaviour — so nothing else
- * on the site changes.
- */
 class SearchResultApplier implements SearchResultApplierInterface
 {
-    /**
-     * @param Collection $collection
-     * @param SearchResultInterface $searchResult
-     * @param int $size
-     * @param int $currentPage
-     */
     public function __construct(
         private readonly Collection $collection,
         private readonly SearchResultInterface $searchResult,
@@ -44,9 +19,6 @@ class SearchResultApplier implements SearchResultApplierInterface
     ) {
     }
 
-    /**
-     * @return void
-     */
     public function apply()
     {
         $allowedIds = $this->collection->getFlag(ApplySaleFilterPlugin::ITEMS_FLAG);
@@ -58,10 +30,6 @@ class SearchResultApplier implements SearchResultApplierInterface
         $this->applyFromSearchResult();
     }
 
-    /**
-     * @param array<int, int> $ids
-     * @return void
-     */
     private function applyFromIdList(array $ids): void
     {
         if (empty($ids)) {
@@ -82,12 +50,6 @@ class SearchResultApplier implements SearchResultApplierInterface
             ->order(new \Zend_Db_Expr(sprintf('FIELD(e.entity_id,%s)', $orderList)));
     }
 
-    /**
-     * Default (no-filter) path — mirrors
-     * {@see \Magento\Elasticsearch\Model\ResourceModel\Fulltext\Collection\SearchResultApplier::apply}.
-     *
-     * @return void
-     */
     private function applyFromSearchResult(): void
     {
         $items = $this->searchResult->getItems();
@@ -106,32 +68,18 @@ class SearchResultApplier implements SearchResultApplierInterface
             ->order(new \Zend_Db_Expr(sprintf('FIELD(e.entity_id,%s)', $orderList)));
     }
 
-    /**
-     * @param array<int, int> $ids
-     * @return array<int, int>
-     */
     private function sliceIds(array $ids, int $size, int $currentPage): array
     {
         [$offset, $pageSize] = $this->resolveSlice(count($ids), $size, $currentPage);
         return array_slice($ids, $offset, $pageSize);
     }
 
-    /**
-     * @param array<int, object> $items
-     * @return array<int, object>
-     */
     private function sliceItems(array $items, int $size, int $currentPage): array
     {
         [$offset, $pageSize] = $this->resolveSlice(count($items), $size, $currentPage);
         return array_slice($items, $offset, $pageSize);
     }
 
-    /**
-     * Resolve `[offset, size]` for the requested page, clamping `$currentPage`
-     * to the last page (mirroring Magento's default behaviour).
-     *
-     * @return array{0: int, 1: int}
-     */
     private function resolveSlice(int $total, int $size, int $currentPage): array
     {
         if ($size === 0) {

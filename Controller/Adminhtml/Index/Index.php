@@ -9,9 +9,6 @@ use Magento\Framework\App\Action\HttpGetActionInterface;
 use Magento\Framework\View\Result\Page;
 use Magento\Framework\View\Result\PageFactory;
 
-/**
- * Renders the Sale Filter index grid page (UI-component listing).
- */
 class Index extends Action implements HttpGetActionInterface
 {
     public const ADMIN_RESOURCE = 'Panth_SaleFilter::index_grid';

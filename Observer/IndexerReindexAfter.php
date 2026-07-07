@@ -9,14 +9,6 @@ use Magento\Framework\Event\ObserverInterface;
 use Panth\SaleFilter\Model\Config;
 use Psr\Log\LoggerInterface;
 
-/**
- * Optional post-reindex hook — cleans block_html + full_page caches in
- * addition to the custom `panth_salefilter` tag.
- *
- * Not wired to an event in v1.0.0 (the indexer itself cleans caches inline)
- * but kept as a class so integrators can dispatch a custom event and have it
- * reused without duplicating cache-clean logic.
- */
 class IndexerReindexAfter implements ObserverInterface
 {
     public function __construct(

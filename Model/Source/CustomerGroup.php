@@ -7,9 +7,6 @@ use Magento\Customer\Api\GroupRepositoryInterface;
 use Magento\Framework\Api\SearchCriteriaBuilder;
 use Magento\Framework\Data\OptionSourceInterface;
 
-/**
- * Dropdown options for the grid's Group ID column (value = customer_group_id).
- */
 class CustomerGroup implements OptionSourceInterface
 {
     public function __construct(
@@ -18,9 +15,6 @@ class CustomerGroup implements OptionSourceInterface
     ) {
     }
 
-    /**
-     * @return array<int, array{value: int, label: string}>
-     */
     public function toOptionArray(): array
     {
         $options = [];

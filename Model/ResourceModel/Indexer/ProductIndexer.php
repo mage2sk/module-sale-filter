@@ -15,33 +15,14 @@ use Magento\Store\Api\Data\WebsiteInterface;
 use Magento\Store\Api\WebsiteRepositoryInterface;
 use Zend_Db_Expr;
 
-/**
- * SQL-layer of the Sale Filter indexer.
- *
- * Rebuilds {@code panth_salefilter_product_index} rows - one per
- * (product_id, customer_group_id, website_id) combo flagged with {@code is_on_sale=1}
- * when the product is currently discounted via an active catalog price rule OR a
- * special price, scoped to that website/group/store.
- *
- * Composite products (configurable / grouped / bundle) inherit "on sale" from
- * any enabled child. The child -> parent walk uses core link tables.
- *
- * All writes are chunked in batches of {@see self::WRITE_CHUNK_SIZE} and wrapped
- * in a transaction per (website, group) scope so a failure never leaves the
- * storefront with a half-populated index (spec §Edge Cases #13).
- */
 class ProductIndexer extends AbstractDb
 {
-    /** Name of the index table populated by this class. */
     private const INDEX_TABLE = 'panth_salefilter_product_index';
 
-    /** Row chunk size for INSERT ... ON DUPLICATE KEY UPDATE writes. */
     private const WRITE_CHUNK_SIZE = 1000;
 
-    /** Catalog product link type id for "grouped product" associations. */
     private const LINK_TYPE_GROUPED = 3;
 
-    /** EAV attribute codes we look up once and cache in {@see $attributeIds}. */
     private const ATTR_CODES = [
         'price',
         'special_price',
@@ -50,13 +31,10 @@ class ProductIndexer extends AbstractDb
         'status',
     ];
 
-    /** @var array<string, int> entity_type=catalog_product attribute_code -> attribute_id. */
     private array $attributeIds = [];
 
-    /** @var array<int, WebsiteInterface>|null lazy-cached website list. */
     private ?array $websites = null;
 
-    /** @var array<int, GroupInterface>|null lazy-cached customer-group list. */
     private ?array $groups = null;
 
     public function __construct(
@@ -70,26 +48,14 @@ class ProductIndexer extends AbstractDb
         parent::__construct($context, $connectionName);
     }
 
-    /**
-     * Required AbstractDb init - pk is composite, we pass `entity_id` for framework compatibility.
-     */
     protected function _construct(): void
     {
         $this->_init(self::INDEX_TABLE, 'entity_id');
     }
 
-    /**
-     * Full reindex: compute on-sale status for every product in every scope and truncate+refill.
-     *
-     * @param bool $includeSpecialPrices
-     * @param bool $includeCatalogRules
-     * @return int Number of rows (product x group x website) flagged on sale.
-     * @throws LocalizedException
-     */
     public function reindexAll(bool $includeSpecialPrices, bool $includeCatalogRules): int
     {
         if (!$includeSpecialPrices && !$includeCatalogRules) {
-            // Nothing to compute - truncate the index so the storefront shows "none on sale".
             $this->getConnection()->delete($this->getTable(self::INDEX_TABLE));
             return 0;
         }
@@ -97,15 +63,6 @@ class ProductIndexer extends AbstractDb
         return $this->reindexScopes($includeSpecialPrices, $includeCatalogRules, null);
     }
 
-    /**
-     * Partial reindex: only recompute rows touching the given product ids.
-     *
-     * @param array<int, int> $productIds
-     * @param bool            $includeSpecialPrices
-     * @param bool            $includeCatalogRules
-     * @return int Rows flagged on sale that intersect $productIds.
-     * @throws LocalizedException
-     */
     public function reindexByIds(array $productIds, bool $includeSpecialPrices, bool $includeCatalogRules): int
     {
         $ids = $this->normalizeIds($productIds);
@@ -114,7 +71,6 @@ class ProductIndexer extends AbstractDb
         }
 
         if (!$includeSpecialPrices && !$includeCatalogRules) {
-            // Neither source is configured - drop our rows for these products.
             $this->getConnection()->delete(
                 $this->getTable(self::INDEX_TABLE),
                 ['entity_id IN (?)' => $ids]
@@ -122,19 +78,11 @@ class ProductIndexer extends AbstractDb
             return 0;
         }
 
-        // Expand the scope so we also (re)evaluate the parents of any affected simples.
         $scopedIds = $this->expandToAffectedProductIds($ids);
 
         return $this->reindexScopes($includeSpecialPrices, $includeCatalogRules, $scopedIds);
     }
 
-    /**
-     * Count currently on-sale rows for a given website/group - used by the StatusCommand.
-     *
-     * @param int $websiteId
-     * @param int $customerGroupId
-     * @return int
-     */
     public function countOnSale(int $websiteId, int $customerGroupId): int
     {
         $connection = $this->getConnection();
@@ -147,15 +95,6 @@ class ProductIndexer extends AbstractDb
         return (int) $connection->fetchOne($select);
     }
 
-    /**
-     * Inner reindex loop - iterate (website, group) scopes and rebuild each.
-     *
-     * @param bool                   $includeSpecialPrices
-     * @param bool                   $includeCatalogRules
-     * @param array<int, int>|null   $restrictToIds Null means "all products", otherwise limit SQL.
-     * @return int Total rows flagged on sale across every scope.
-     * @throws LocalizedException
-     */
     private function reindexScopes(
         bool $includeSpecialPrices,
         bool $includeCatalogRules,
@@ -167,7 +106,6 @@ class ProductIndexer extends AbstractDb
         foreach ($this->loadWebsites() as $website) {
             $websiteId = (int) $website->getId();
             if ($websiteId === 0) {
-                // Admin website has no storefront - skip.
                 continue;
             }
             $storeId = $this->resolveDefaultStoreId($website);
@@ -202,20 +140,6 @@ class ProductIndexer extends AbstractDb
         return $totalOnSale;
     }
 
-    /**
-     * Collect all product ids that should be flagged on-sale for this (website, group) scope.
-     *
-     * Combines catalog-rule matches + special-price matches (per flags), then walks up
-     * to composite parents (configurable / grouped / bundle) keeping only enabled children.
-     *
-     * @param int                  $websiteId
-     * @param int                  $storeId
-     * @param int                  $customerGroupId
-     * @param bool                 $includeSpecialPrices
-     * @param bool                 $includeCatalogRules
-     * @param array<int, int>|null $restrictToIds
-     * @return array<int, int> Unique product ids on sale in this scope.
-     */
     private function collectOnSaleIdsForScope(
         int $websiteId,
         int $storeId,
@@ -244,22 +168,12 @@ class ProductIndexer extends AbstractDb
             return [];
         }
 
-        // Walk to parents - configurable / grouped / bundle - only keeping enabled children.
         $enabledChildren = $this->filterEnabledProducts($simpleIds, $storeId);
         $parentIds       = $this->collectParentsForChildren($enabledChildren);
 
-        // Final set: the enabled simples themselves + any parent whose child triggered the rule.
         return $this->mergeIds($enabledChildren, $parentIds);
     }
 
-    /**
-     * catalog_rule matches for (website, group) today.
-     *
-     * @param int                  $websiteId
-     * @param int                  $customerGroupId
-     * @param array<int, int>|null $restrictToIds
-     * @return array<int, int>
-     */
     private function selectCatalogRuleOnSale(
         int $websiteId,
         int $customerGroupId,
@@ -280,19 +194,11 @@ class ProductIndexer extends AbstractDb
         return array_map('intval', $connection->fetchCol($select));
     }
 
-    /**
-     * Special-price matches for the given store (within window, < price, > 0).
-     *
-     * @param int                  $storeId
-     * @param array<int, int>|null $restrictToIds
-     * @return array<int, int>
-     */
     private function selectSpecialPriceOnSale(int $storeId, ?array $restrictToIds): array
     {
         $connection = $this->getConnection();
         $attrIds    = $this->loadAttributeIds();
 
-        // Required attributes must exist - if missing, EAV is broken, no results.
         foreach (['price', 'special_price'] as $required) {
             if (!isset($attrIds[$required])) {
                 return [];
@@ -354,15 +260,6 @@ class ProductIndexer extends AbstractDb
         return array_map('intval', $connection->fetchCol($select));
     }
 
-    /**
-     * Filter a list of ids down to those currently enabled (status=1) for the given store.
-     *
-     * Per spec: "only enabled children count" when aggregating a parent's sale status.
-     *
-     * @param array<int, int> $productIds
-     * @param int             $storeId
-     * @return array<int, int>
-     */
     private function filterEnabledProducts(array $productIds, int $storeId): array
     {
         if ($productIds === []) {
@@ -377,7 +274,6 @@ class ProductIndexer extends AbstractDb
         $connection = $this->getConnection();
         $intTable   = $this->getTable('catalog_product_entity_int');
 
-        // Prefer store-scope value, fall back to default (store_id=0).
         $select = $connection->select()
             ->from(['s' => $intTable], ['entity_id'])
             ->where('s.attribute_id = ?', (int) $attrIds['status'])
@@ -388,12 +284,6 @@ class ProductIndexer extends AbstractDb
         return array_map('intval', $connection->fetchCol($select));
     }
 
-    /**
-     * Walk child ids up to their composite parents via core link tables.
-     *
-     * @param array<int, int> $childIds
-     * @return array<int, int>
-     */
     private function collectParentsForChildren(array $childIds): array
     {
         if ($childIds === []) {
@@ -403,7 +293,6 @@ class ProductIndexer extends AbstractDb
         $connection = $this->getConnection();
         $parents    = [];
 
-        // Configurable: catalog_product_super_link (product_id = child, parent_id = configurable).
         $superLinkTable = $this->getTable('catalog_product_super_link');
         $select = $connection->select()
             ->from($superLinkTable, ['parent_id'])
@@ -411,7 +300,6 @@ class ProductIndexer extends AbstractDb
             ->distinct(true);
         $parents = $this->mergeIds($parents, array_map('intval', $connection->fetchCol($select)));
 
-        // Grouped: catalog_product_link with link_type_id = 3.
         $linkTable = $this->getTable('catalog_product_link');
         $select = $connection->select()
             ->from($linkTable, ['product_id'])
@@ -420,7 +308,6 @@ class ProductIndexer extends AbstractDb
             ->distinct(true);
         $parents = $this->mergeIds($parents, array_map('intval', $connection->fetchCol($select)));
 
-        // Bundle: catalog_product_bundle_selection (product_id = child, parent_product_id = bundle).
         $bundleTable = $this->getTable('catalog_product_bundle_selection');
         $select = $connection->select()
             ->from($bundleTable, ['parent_product_id'])
@@ -431,22 +318,13 @@ class ProductIndexer extends AbstractDb
         return $parents;
     }
 
-    /**
-     * For a partial reindex we must also re-evaluate any parent or child touched by the request,
-     * otherwise a simple product change would not bubble up to its configurable/bundle parent.
-     *
-     * @param array<int, int> $productIds
-     * @return array<int, int>
-     */
     private function expandToAffectedProductIds(array $productIds): array
     {
         $connection = $this->getConnection();
         $expanded = $productIds;
 
-        // Include parents of given products (treat given ids as potential children).
         $expanded = $this->mergeIds($expanded, $this->collectParentsForChildren($productIds));
 
-        // Include children of given products (treat given ids as potential parents).
         $superLink = $this->getTable('catalog_product_super_link');
         $select = $connection->select()
             ->from($superLink, ['product_id'])
@@ -472,18 +350,6 @@ class ProductIndexer extends AbstractDb
         return $expanded;
     }
 
-    /**
-     * Remove stale index rows - rows that we previously flagged on_sale=1 but should no longer.
-     *
-     * For a scoped (partial) reindex this is limited to the products we touched so we never
-     * nuke unrelated rows (spec: "don't nuke rows for unrelated products").
-     *
-     * @param int                  $websiteId
-     * @param int                  $customerGroupId
-     * @param array<int, int>      $onSaleIds Current on-sale product ids for this scope.
-     * @param array<int, int>|null $restrictToIds Null for full reindex, else partial scope.
-     * @return void
-     */
     private function purgeStale(
         int $websiteId,
         int $customerGroupId,
@@ -499,17 +365,14 @@ class ProductIndexer extends AbstractDb
             'is_on_sale = ?'        => 1,
         ];
 
-        // Don't delete the products we're about to re-flag.
         if ($onSaleIds !== []) {
             $where[$connection->quoteInto('entity_id NOT IN (?)', $onSaleIds)] = null;
         }
 
-        // Partial scope: never touch rows outside the requested id set.
         if ($restrictToIds !== null && $restrictToIds !== []) {
             $where[$connection->quoteInto('entity_id IN (?)', $restrictToIds)] = null;
         }
 
-        // Compact the where clauses that use quoteInto (value=null) into plain where strings.
         $conds = [];
         foreach ($where as $clause => $val) {
             $conds[] = $val === null ? $clause : $connection->quoteInto($clause, $val);
@@ -518,14 +381,6 @@ class ProductIndexer extends AbstractDb
         $connection->delete($table, implode(' AND ', $conds));
     }
 
-    /**
-     * Insert (or update) the on-sale rows for this scope, chunked.
-     *
-     * @param int             $websiteId
-     * @param int             $customerGroupId
-     * @param array<int, int> $onSaleIds
-     * @return int Number of rows written with is_on_sale=1.
-     */
     private function writeOnSaleRows(int $websiteId, int $customerGroupId, array $onSaleIds): int
     {
         if ($onSaleIds === []) {
@@ -548,18 +403,12 @@ class ProductIndexer extends AbstractDb
                 ];
             }
 
-            // insertOnDuplicate gives us INSERT ... ON DUPLICATE KEY UPDATE atomically.
             $written += $connection->insertOnDuplicate($table, $rows, ['is_on_sale']);
         }
 
         return $written;
     }
 
-    /**
-     * Load all websites once per request and cache.
-     *
-     * @return WebsiteInterface[]
-     */
     private function loadWebsites(): array
     {
         if ($this->websites === null) {
@@ -569,11 +418,6 @@ class ProductIndexer extends AbstractDb
         return $this->websites;
     }
 
-    /**
-     * Load all customer groups once per request and cache.
-     *
-     * @return GroupInterface[]
-     */
     private function loadCustomerGroups(): array
     {
         if ($this->groups === null) {
@@ -584,15 +428,8 @@ class ProductIndexer extends AbstractDb
         return $this->groups;
     }
 
-    /**
-     * Resolve the default store id for a given website - used to read store-scoped EAV values.
-     *
-     * @param WebsiteInterface $website
-     * @return int
-     */
     private function resolveDefaultStoreId(WebsiteInterface $website): int
     {
-        // WebsiteInterface doesn't expose getDefaultStore() directly; fall back through the group.
         if (method_exists($website, 'getDefaultStore')) {
             $store = $website->getDefaultStore();
             if ($store !== null) {
@@ -617,7 +454,6 @@ class ProductIndexer extends AbstractDb
             }
         }
 
-        // Last resort: any non-admin store on this website.
         $connection = $this->getConnection();
         $select = $connection->select()
             ->from($this->getTable('store'), ['store_id'])
@@ -629,11 +465,6 @@ class ProductIndexer extends AbstractDb
         return (int) $connection->fetchOne($select);
     }
 
-    /**
-     * Load catalog_product attribute ids for our fixed set of codes, once, and cache.
-     *
-     * @return array<string, int>
-     */
     private function loadAttributeIds(): array
     {
         if ($this->attributeIds !== []) {
@@ -642,7 +473,6 @@ class ProductIndexer extends AbstractDb
 
         $connection = $this->getConnection();
 
-        // Join against eav_entity_type to scope exclusively to catalog_product.
         $select = $connection->select()
             ->from(['a' => $this->getTable('eav_attribute')], ['attribute_code', 'attribute_id'])
             ->join(
@@ -663,13 +493,6 @@ class ProductIndexer extends AbstractDb
         return $this->attributeIds;
     }
 
-    /**
-     * Merge two id lists preserving uniqueness, returning a 0-indexed list.
-     *
-     * @param array<int, int> $a
-     * @param array<int, int> $b
-     * @return array<int, int>
-     */
     private function mergeIds(array $a, array $b): array
     {
         $merged = [];
@@ -689,12 +512,6 @@ class ProductIndexer extends AbstractDb
         return array_values($merged);
     }
 
-    /**
-     * Cast arbitrary id input to a clean list of positive ints.
-     *
-     * @param array<int, int|string> $ids
-     * @return array<int, int>
-     */
     private function normalizeIds(array $ids): array
     {
         $clean = [];

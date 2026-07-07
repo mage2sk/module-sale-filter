@@ -8,13 +8,6 @@ use Magento\Backend\Block\Template\Context;
 use Magento\Framework\Module\ModuleListInterface;
 use Magento\Framework\Url as UrlGenerator;
 
-/**
- * View-model for the Sale Filter "How It Works" admin page.
- *
- * Exposes helpers the template needs (module version, config URL, grid
- * URL, storefront base URL) without the template having to reach for
- * object-manager statics.
- */
 class Page extends Template
 {
     public function __construct(
