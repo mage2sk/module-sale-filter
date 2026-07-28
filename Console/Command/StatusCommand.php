@@ -31,7 +31,7 @@ class StatusCommand extends Command
     protected function configure(): void
     {
         $this->setName('panth:salefilter:status');
-        $this->setDescription('Show Panth Sale Filter indexer status — on-sale count per website x customer group.');
+        $this->setDescription('Show Panth Sale Filter indexer status - on-sale count per website x customer group.');
         parent::configure();
     }
 

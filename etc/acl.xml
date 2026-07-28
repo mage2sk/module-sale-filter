@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
 /**
- * Panth_SaleFilter — ACL.
+ * Panth_SaleFilter - ACL.
  *
  * Single branch under Panth_Core::panth_extensions exposes:
  *   - group         : the Sale Filter sidebar node

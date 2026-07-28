@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
 /**
- * Panth_SaleFilter — Admin menu.
+ * Panth_SaleFilter - Admin menu.
  *
  * Nests the Sale Filter module under the "Panth Infotech" top-level
  * (Panth_Core::panth_extensions) and exposes two children:

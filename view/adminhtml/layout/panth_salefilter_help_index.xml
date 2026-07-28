@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <!--
 /**
- * Panth_SaleFilter — "How It Works" admin doc page layout.
+ * Panth_SaleFilter - "How It Works" admin doc page layout.
  *
  * Renders a single full-width content block under the standard admin
- * chrome (top bar, menu, footer). No UI components — a plain template
+ * chrome (top bar, menu, footer). No UI components - a plain template
  * block keeps the page fast to load and avoids the `ui_component` XSD
  * overhead for a static doc view.
  */

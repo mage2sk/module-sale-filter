@@ -33,7 +33,7 @@
 - **Real-time counts** next to each option (`On Sale (12)`) that match the grid total after clicking.
 - An **indexer-driven discount engine** that checks catalog price rules, special prices, tier prices, and customer-group pricing.
 - **Parent aggregation** so a configurable, grouped, or bundle product shows as on sale as soon as any eligible child is discounted.
-- An **admin index grid** at System → Panth Infotech → Sale Filter → Index Grid for debugging individual products.
+- An **admin index grid** at System -> Panth Infotech -> Sale Filter -> Index Grid for debugging individual products.
 
 **Which themes are supported?** **Luma** natively. For **Hyva**, install the free companion package `mage2kishan/module-sale-filter-hyva`.
 
@@ -134,14 +134,14 @@ Performance - SEO - Adobe Commerce Cloud
 - **All product types** including simple, configurable, grouped, bundle, virtual, and downloadable.
 
 ### Indexer
-- **Dedicated indexer** `panth_salefilter_product` shown in System → Tools → Index Management.
+- **Dedicated indexer** `panth_salefilter_product` shown in System -> Tools -> Index Management.
 - **MView subscriptions** on product price, special price date, catalog rule price, and product relation tables for automatic updates.
 - **Update by Schedule** (default, cron-driven, recommended for production) and **Update on Save** (synchronous, good for staging).
 - **Flat index table** `panth_salefilter_product_index` keyed by `(entity_id, customer_group_id, website_id)` for fast JOIN lookups.
 - **Dated discounts flip automatically** at the minute they start or end via Magento's `catalogrule_apply_all` nightly cron.
 
 ### Admin and Operations
-- **Admin index grid** at Panth Infotech → Sale Filter → Index Grid showing product id, SKU, type, website, customer group, regular price, special price, is-on-sale, rule price, discount %, active rules, and match source.
+- **Admin index grid** at Panth Infotech -> Sale Filter -> Index Grid showing product id, SKU, type, website, customer group, regular price, special price, is-on-sale, rule price, discount %, active rules, and match source.
 - **CLI helpers** `bin/magento panth_salefilter:reindex` and `panth_salefilter:status`.
 - **Cache invalidation** across all configured cache frontends, including split Redis setups.
 - **Per-customer-group FPC keying** so each shopper group sees its own correct cached count.
@@ -239,14 +239,14 @@ bin/magento indexer:status panth_salefilter_product
 
 After install, open:
 ```
-Admin → Stores → Configuration → Panth Extensions → Sale Filter
+Admin -> Stores -> Configuration -> Panth Extensions -> Sale Filter
 ```
 
 ---
 
 ## Configuration
 
-Go to **Stores → Configuration → Panth Extensions → Sale Filter**.
+Go to **Stores -> Configuration -> Panth Extensions -> Sale Filter**.
 
 All fields are store-scoped, so you can set different labels per store view for multi-locale installs.
 
@@ -275,7 +275,7 @@ All fields are store-scoped, so you can set different labels per store view for 
 
 ## Admin Index Grid
 
-Open **Panth Infotech → Sale Filter → Index Grid** in the admin.
+Open **Panth Infotech -> Sale Filter -> Index Grid** in the admin.
 
 ![Sale Filter Index grid](docs/images/admin-index-grid.png)
 
@@ -301,7 +301,7 @@ The grid is a UI component over `panth_salefilter_product_index` with filters, c
 
 ## Indexing
 
-`panth_salefilter_product` appears in **System → Tools → Index Management**.
+`panth_salefilter_product` appears in **System -> Tools -> Index Management**.
 
 ![Index Management](docs/images/admin-index-management.png)
 
@@ -310,7 +310,7 @@ Two modes are available:
 - **Update by Schedule** (default) - MView changelog captures changed product ids, and Magento's `indexer_update_all_views` cron processes them approximately every minute. Recommended for production.
 - **Update on Save** - observers fire `reindexRow` inline on every relevant save. More DB writes during bulk imports, but the storefront reflects changes immediately. Good for staging.
 
-Switch modes via the Index Management grid (Actions → Update Mode) or via CLI:
+Switch modes via the Index Management grid (Actions -> Update Mode) or via CLI:
 
 ```bash
 bin/magento indexer:set-mode schedule panth_salefilter_product

@@ -28,7 +28,7 @@
 
                 <field id="option_label_on_sale" translate="label comment" type="text" sortOrder="22"
                        showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Option Label — On Sale</label>
+                    <label>Option Label - On Sale</label>
                     <comment>Label for the option that shows only discounted products (e.g. "On Sale").</comment>
                 </field>
 
@@ -36,12 +36,12 @@
                        showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Show "Not On Sale" Option</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <comment>When enabled, the filter lists two options — one for on-sale products and one for regular-price products — so shoppers can toggle between them.</comment>
+                    <comment>When enabled, the filter lists two options - one for on-sale products and one for regular-price products - so shoppers can toggle between them.</comment>
                 </field>
 
                 <field id="option_label_not_on_sale" translate="label comment" type="text" sortOrder="26"
                        showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Option Label — Not On Sale</label>
+                    <label>Option Label - Not On Sale</label>
                     <depends>
                         <field id="show_not_on_sale_option">1</field>
                     </depends>

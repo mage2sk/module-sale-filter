@@ -5,7 +5,7 @@
     <!-- Replace the default search-result appliers with our filter-aware
          version. It behaves identically to core when no sale_filter is
          active, and slices our pre-resolved on-sale id list BEFORE paging
-         when sale_filter is active — so page 1 genuinely shows the first N
+         when sale_filter is active - so page 1 genuinely shows the first N
          filtered products instead of (ES page slice) ∩ (on-sale).
 
          The interface preference alone isn't enough: the ES module's
@@ -38,7 +38,7 @@
     </type>
 
     <!-- Apply the active sale_filter param to the product collection as early
-         as possible — on the very first Layer::getProductCollection() call,
+         as possible - on the very first Layer::getProductCollection() call,
          ahead of the toolbar's getSize() so the pager reports the post-filter
          "N of M". AbstractFilter::apply() fires too late, after the toolbar
          has already cached the unfiltered total. -->
@@ -102,7 +102,7 @@
     <!-- Restore cookie-aware FPC cache keying for built-in FPC on 2.4.7+.
          Magento's IdentifierForSave drops the X-Magento-Vary cookie from
          the cache key, which means guest and logged-in customers share one
-         FPC entry per URL — whoever warmed it wins. Our sale filter has
+         FPC entry per URL - whoever warmed it wins. Our sale filter has
          per-group counts, so a guest-warmed category page hides the "Yes"
          option for logged-in General/Wholesale/Retailer shoppers.
 

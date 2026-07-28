@@ -4,8 +4,8 @@
 
     <!--
         Catalog rule model events. `catalogrule_after_apply` is NOT fired
-        anywhere in Magento 2.4 — only `etc/events.xml` files reference it as
-        a listener — so we subscribe to the standard `_eventPrefix` events
+        anywhere in Magento 2.4 - only `etc/events.xml` files reference it as
+        a listener - so we subscribe to the standard `_eventPrefix` events
         from `Magento\CatalogRule\Model\Rule` instead (prefix is
         `catalogrule_rule`). These fire on every admin rule save, delete, or
         commit.

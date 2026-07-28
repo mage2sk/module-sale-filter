@@ -23,7 +23,7 @@ class Index extends Action
     {
         $page = $this->resultPageFactory->create();
         $page->setActiveMenu('Panth_SaleFilter::help');
-        $page->getConfig()->getTitle()->prepend((string) __('Sale Filter — How It Works'));
+        $page->getConfig()->getTitle()->prepend((string) __('Sale Filter - How It Works'));
 
         return $page;
     }
