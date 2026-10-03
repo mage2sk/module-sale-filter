@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Indexer/etc/indexer.xsd">
+    <indexer id="panth_salefilter_product"
+             view_id="panth_salefilter_product"
+             class="Panth\SaleFilter\Model\Indexer\ProductIndexer"
+             shared_index="catalog_product_price">
+        <title translate="true">Sale Filter Product Index</title>
+        <description translate="true">Indexes products currently on sale (catalog rules + special prices)</description>
+        <dependencies>
+            <indexer id="catalogrule_product"/>
+            <indexer id="catalog_product_price"/>
+        </dependencies>
+    </indexer>
+</config>

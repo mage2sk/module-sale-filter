@@ -1,0 +1,35 @@
+<?php
+/**
+ * @var \Panth\SaleFilter\Block\LayeredNavigation\FilterRenderer $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$filter = $block->getFilter();
+if ($filter === null) {
+    return;
+}
+$items = $filter->getItems();
+if ($items === []) {
+    return;
+}
+$showCount = $block->isShowCount();
+?>
+<ol class="items panth-salefilter">
+    <?php foreach ($items as $item): ?>
+        <?php $count = (int) $item->getCount(); ?>
+        <li class="item">
+            <?php if ($count > 0): ?>
+                <a href="<?= $escaper->escapeUrl($item->getUrl()) ?>" rel="nofollow">
+                    <?= $escaper->escapeHtml($item->getLabel()) ?>
+                    <?php if ($showCount): ?>
+                        <span class="count"><?= (int) $count ?><span class="filter-count-label"><?=
+                            $escaper->escapeHtml($count === 1 ? __('item') : __('items'))
+                        ?></span></span>
+                    <?php endif; ?>
+                </a>
+            <?php else: ?>
+                <?= $escaper->escapeHtml($item->getLabel()) ?>
+            <?php endif; ?>
+        </li>
+    <?php endforeach; ?>
+</ol>
